@@ -227,7 +227,7 @@ struct CFAnalysisTask {
 
     // Perfroming the track selection==============================================================================================================
     for (auto track : inputTracks) { // Loop over tracks
-    if (!((fabs(track.eta()) < 0.8) && (fabs(track.dcaXY()) < 0.12) && (fabs(track.dcaZ()) < 1.) && (track.pt() > 0.15 && track.pt() < 2.))) {
+      if (!((fabs(track.eta()) < 0.8) && (fabs(track.dcaXY()) < 0.12) && (fabs(track.dcaZ()) < 1.) && (track.pt() > 0.15 && track.pt() < 2.))) {
         continue;
       }
 
