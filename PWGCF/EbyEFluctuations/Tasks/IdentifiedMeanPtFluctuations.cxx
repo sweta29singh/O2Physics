@@ -59,7 +59,6 @@ using MyTrack = MyTracks::iterator;
 struct IdentifiedMeanPtFluctuations {
   HistogramRegistry histos{"Histos", {}, OutputObjHandlingPolicy::AnalysisObject};
 
-
   void init(o2::framework::InitContext&)
   {
     // Define your axes
