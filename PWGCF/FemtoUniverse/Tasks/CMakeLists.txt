@@ -14,7 +14,7 @@ o2physics_add_dpl_workflow(femtouniverse-pair-track-track
           PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
           COMPONENT_NAME Analysis)
 
-          o2physics_add_dpl_workflow(femtouniverse-pair-track-track-mc-truth
+o2physics_add_dpl_workflow(femtouniverse-pair-track-track-mc-truth
           SOURCES femtoUniversePairTaskTrackTrackMcTruth.cxx
           PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
           COMPONENT_NAME Analysis)
@@ -24,8 +24,23 @@ o2physics_add_dpl_workflow(femtouniverse-pair-track-track-extended
           PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
           COMPONENT_NAME Analysis)
 
-o2physics_add_dpl_workflow(femtouniverse-pair-track-track-mult-kt
-          SOURCES femtoUniversePairTaskTrackTrackMultKt.cxx
+o2physics_add_dpl_workflow(femtouniverse-pair-track-track-mult-kt-extended
+          SOURCES femtoUniversePairTaskTrackTrackMultKtExtended.cxx
+          PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
+          COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(femtouniverse-pair-track-nucleus
+          SOURCES femtoUniversePairTaskTrackNucleus.cxx
+          PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
+          COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(femtouniverse-pair-track-track-threedrelmom-mult-kt-extended
+          SOURCES femtoUniversePairTaskTrackTrack3DMultKtExtended.cxx
+          PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
+          COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(o2-analysis-cf-femtouniverse-pair-track-track-spherhar-mult-kt-extended
+          SOURCES femtoUniversePairTaskTrackTrackSpherHarMultKtExtended.cxx
           PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
           COMPONENT_NAME Analysis)
 
@@ -34,8 +49,18 @@ o2physics_add_dpl_workflow(femtouniverse-debug-track
           PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
           COMPONENT_NAME Analysis)
 
-o2physics_add_dpl_workflow(femtouniverse-pair-track-v0
-          SOURCES femtoUniversePairTaskTrackV0.cxx
+o2physics_add_dpl_workflow(femtouniverse-pair-track-v0-extended
+          SOURCES femtoUniversePairTaskTrackV0Extended.cxx
+          PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
+          COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(femtouniverse-pair-track-cascade-extended
+          SOURCES femtoUniversePairTaskTrackCascadeExtended.cxx
+          PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
+          COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(femtouniverse-pair-track-d0
+          SOURCES femtoUniversePairTaskTrackD0.cxx
           PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
           COMPONENT_NAME Analysis)
 
@@ -51,6 +76,21 @@ o2physics_add_dpl_workflow(femtouniverse-debug-v0
 
 o2physics_add_dpl_workflow(femtouniverse-hash
           SOURCES femtoUniverseHashTask.cxx
+          PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
+          COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(femtouniverse-pair-track-track-m-c
+          SOURCES femtoUniversePairTaskTrackTrackMC.cxx
+          PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
+          COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(femtouniverse-efficiency-task
+          SOURCES femtoUniverseEfficiencyTask.cxx
+          PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
+          COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(femtouniverse-efficiency-base
+          SOURCES femtoUniverseEfficiencyBase.cxx
           PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
           COMPONENT_NAME Analysis)
 

@@ -20,6 +20,7 @@
 
 #include "Common/Core/TrackSelectorPID.h"
 
+#include "PWGHF/Core/HfHelper.h"
 #include "PWGHF/Core/SelectorCuts.h"
 #include "PWGHF/DataModel/CandidateReconstructionTables.h"
 #include "PWGHF/DataModel/CandidateSelectionTables.h"
@@ -27,10 +28,7 @@
 using namespace o2;
 using namespace o2::aod;
 using namespace o2::framework;
-using namespace o2::aod::hf_cand_b0; // from CandidateReconstructionTables.h
 using namespace o2::analysis;
-using namespace o2::aod::hf_cand_2prong;
-using namespace o2::analysis::hf_cuts_b0_to_d_pi; // from SelectorCuts.h
 
 struct HfCandidateSelectorB0ToDPi {
   Produces<aod::HfSelB0ToDPi> hfSelB0ToDPiCandidate; // table defined in CandidateSelectionTables.h
@@ -52,13 +50,14 @@ struct HfCandidateSelectorB0ToDPi {
   Configurable<double> nSigmaTofCombinedMax{"nSigmaTofCombinedMax", 5., "Nsigma cut on TOF combined with TPC"};
   // topological cuts
   Configurable<std::vector<double>> binsPt{"binsPt", std::vector<double>{hf_cuts_b0_to_d_pi::vecBinsPt}, "pT bin limits"};
-  Configurable<LabeledArray<double>> cuts{"cuts", {hf_cuts_b0_to_d_pi::cuts[0], nBinsPt, nCutVars, labelsPt, labelsCutVar}, "B0 candidate selection per pT bin"};
+  Configurable<LabeledArray<double>> cuts{"cuts", {hf_cuts_b0_to_d_pi::cuts[0], hf_cuts_b0_to_d_pi::nBinsPt, hf_cuts_b0_to_d_pi::nCutVars, hf_cuts_b0_to_d_pi::labelsPt, hf_cuts_b0_to_d_pi::labelsCutVar}, "B0 candidate selection per pT bin"};
   // QA switch
   Configurable<bool> activateQA{"activateQA", false, "Flag to enable QA histogram"};
   // check if selectionFlagD (defined in candidateCreatorB0.cxx) and usePid configurables are in sync
 
   bool selectionFlagDAndUsePidInSync = true;
   TrackSelectorPi selectorPion;
+  HfHelper hfHelper;
 
   using TracksPidWithSel = soa::Join<aod::TracksWExtra, aod::TracksPidPi, aod::TrackSelection>;
 
@@ -119,22 +118,13 @@ struct HfCandidateSelectorB0ToDPi {
       int statusB0ToDPi = 0;
       auto ptCandB0 = hfCandB0.pt();
 
-      // check if flagged as B0 → D π
-      if (!TESTBIT(hfCandB0.hfflag(), hf_cand_b0::DecayType::B0ToDPi)) {
-        hfSelB0ToDPiCandidate(statusB0ToDPi);
-        if (activateQA) {
-          registry.fill(HIST("hSelections"), 1, ptCandB0);
-        }
-        // LOGF(info, "B0 candidate selection failed at hfflag check");
-        continue;
-      }
       SETBIT(statusB0ToDPi, SelectionStep::RecoSkims); // RecoSkims = 0 --> statusB0ToDPi = 1
       if (activateQA) {
         registry.fill(HIST("hSelections"), 2 + SelectionStep::RecoSkims, ptCandB0);
       }
 
       // topological cuts
-      if (!hf_sel_candidate_b0::selectionTopol(hfCandB0, cuts, binsPt)) {
+      if (!hfHelper.selectionB0ToDPiTopol(hfCandB0, cuts, binsPt)) {
         hfSelB0ToDPiCandidate(statusB0ToDPi);
         // LOGF(info, "B0 candidate selection failed at topology selection");
         continue;
@@ -153,7 +143,7 @@ struct HfCandidateSelectorB0ToDPi {
       if (usePid) {
         auto trackPi = hfCandB0.prong1_as<TracksPidWithSel>();
         int pidTrackPi = selectorPion.statusTpcAndTof(trackPi);
-        if (!hf_sel_candidate_b0::selectionPID(pidTrackPi, acceptPIDNotApplicable.value)) {
+        if (!hfHelper.selectionB0ToDPiPid(pidTrackPi, acceptPIDNotApplicable.value)) {
           // LOGF(info, "B0 candidate selection failed at PID selection");
           hfSelB0ToDPiCandidate(statusB0ToDPi);
           continue;

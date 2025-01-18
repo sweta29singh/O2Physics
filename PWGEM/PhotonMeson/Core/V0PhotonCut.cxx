@@ -10,15 +10,20 @@
 // or submit itself to any jurisdiction.
 
 //
-// Class for track selection
+// Class for v0 photon selection
 //
+
+#include <set>
+#include <utility>
 
 #include "Framework/Logger.h"
 #include "PWGEM/PhotonMeson/Core/V0PhotonCut.h"
 
 ClassImp(V0PhotonCut);
 
-const char* V0PhotonCut::mCutNames[static_cast<int>(V0PhotonCut::V0PhotonCuts::kNCuts)] = {"Mee", "V0PtRange", "V0EtaRange", "AP", " PsiPair", "PhivPair", "Rxy", "CosPA", "PCA", "RZLine", "OnWwireIB", "OnWwireOB", "TrackPtRange", "TrackEtaRange", "TPCNCls", "TPCCrossedRows", "TPCCrossedRowsOverNCls", "TPCChi2NDF", "TPCNsigmaEl", "TPCNsigmaPi", "DCAxy", "DCAz", "ITSNCls", "ITSChi2NDF", "IsWithinBeamPipe", "RequireITSTPC", "RequireITSonly", "RequireTPConly", "RequireTPCTRD", "RequireTPCTOF", "RequireTPCTRDTOF"};
+const std::pair<int8_t, std::set<uint8_t>> V0PhotonCut::its_ib_Requirement = {0, {0, 1, 2}};           // no hit on 3 ITS ib layers.
+const std::pair<int8_t, std::set<uint8_t>> V0PhotonCut::its_ob_Requirement = {4, {3, 4, 5, 6}};        // all hits on 4 ITS ob layers.
+const std::pair<int8_t, std::set<uint8_t>> V0PhotonCut::its_ob_Requirement_ITSTPC = {2, {3, 4, 5, 6}}; // at least 2 hits on 4 ITS ob layers.
 
 void V0PhotonCut::SetV0PtRange(float minPt, float maxPt)
 {
@@ -77,6 +82,11 @@ void V0PhotonCut::SetMaxPCA(float max)
   mMaxPCA = max;
   LOG(info) << "V0 Photon Cut, set max distance between 2 legs: " << mMaxPCA;
 }
+void V0PhotonCut::SetMaxChi2KF(float max)
+{
+  mMaxChi2KF = max;
+  LOG(info) << "V0 Photon Cut, set max chi2/ndf with KF: " << mMaxChi2KF;
+}
 void V0PhotonCut::SetMaxMarginZ(float max)
 {
   mMaxMarginZ = max;
@@ -85,12 +95,17 @@ void V0PhotonCut::SetMaxMarginZ(float max)
 void V0PhotonCut::SetOnWwireIB(bool flag)
 {
   mIsOnWwireIB = flag;
-  LOG(info) << "V0 Photon Cut, select photon on Tungstate wire IB: " << mIsOnWwireIB;
+  LOG(info) << "V0 Photon Cut, select photon on Tungsten wire IB: " << mIsOnWwireIB;
 }
 void V0PhotonCut::SetOnWwireOB(bool flag)
 {
   mIsOnWwireOB = flag;
-  LOG(info) << "V0 Photon Cut, select photon on Tungstate wire OB: " << mIsOnWwireOB;
+  LOG(info) << "V0 Photon Cut, select photon on Tungsten wire OB: " << mIsOnWwireOB;
+}
+void V0PhotonCut::RejectITSib(bool flag)
+{
+  mRejectITSib = flag;
+  LOG(info) << "V0 Photon Cut, reject photon on ITSib: " << mRejectITSib;
 }
 void V0PhotonCut::SetTPCNsigmaElRange(float min, float max)
 {
@@ -131,6 +146,11 @@ void V0PhotonCut::SetMinNCrossedRowsOverFindableClustersTPC(float minNCrossedRow
   mMinNCrossedRowsOverFindableClustersTPC = minNCrossedRowsOverFindableClustersTPC;
   LOG(info) << "V0 Photon Cut, set min N crossed rows over findable clusters TPC: " << mMinNCrossedRowsOverFindableClustersTPC;
 }
+void V0PhotonCut::SetMaxFracSharedClustersTPC(float max)
+{
+  mMaxFracSharedClustersTPC = max;
+  LOG(info) << "V0 Photon Cut, set max fraction of shared clusters in  TPC: " << mMaxFracSharedClustersTPC;
+}
 void V0PhotonCut::SetChi2PerClusterTPC(float min, float max)
 {
   mMinChi2PerClusterTPC = min;
@@ -165,6 +185,12 @@ void V0PhotonCut::SetChi2PerClusterITS(float min, float max)
   mMinChi2PerClusterITS = min;
   mMaxChi2PerClusterITS = max;
   LOG(info) << "V0 Photon Cut, set chi2 per cluster ITS range: " << mMinChi2PerClusterITS << " - " << mMaxChi2PerClusterITS;
+}
+void V0PhotonCut::SetMeanClusterSizeITSob(float min, float max)
+{
+  mMinMeanClusterSizeITS = min;
+  mMaxMeanClusterSizeITS = max;
+  LOG(info) << "V0 Photon Cut, set mean cluster size ITS range: " << mMinMeanClusterSizeITS << " - " << mMaxMeanClusterSizeITS;
 }
 
 void V0PhotonCut::SetIsWithinBeamPipe(bool flag)
@@ -209,37 +235,8 @@ void V0PhotonCut::SetRequireTPCTRDTOF(bool flag)
   LOG(info) << "V0 Photon Cut, require TPC-TOF track: " << mRequireTPCTRDTOF;
 }
 
-void V0PhotonCut::print() const
+void V0PhotonCut::SetDisableITSonly(bool flag)
 {
-  LOG(info) << "V0 Photon Cut:";
-  for (int i = 0; i < static_cast<int>(V0PhotonCuts::kNCuts); i++) {
-    switch (static_cast<V0PhotonCuts>(i)) {
-      case V0PhotonCuts::kTrackPtRange:
-        LOG(info) << mCutNames[i] << " in [" << mMinTrackPt << ", " << mMaxTrackPt << "]";
-        break;
-      case V0PhotonCuts::kTrackEtaRange:
-        LOG(info) << mCutNames[i] << " in [" << mMinTrackEta << ", " << mMaxTrackEta << "]";
-        break;
-      case V0PhotonCuts::kTPCNCls:
-        LOG(info) << mCutNames[i] << " > " << mMinNClustersTPC;
-        break;
-      case V0PhotonCuts::kTPCCrossedRows:
-        LOG(info) << mCutNames[i] << " > " << mMinNCrossedRowsTPC;
-        break;
-      case V0PhotonCuts::kTPCCrossedRowsOverNCls:
-        LOG(info) << mCutNames[i] << " > " << mMinNCrossedRowsOverFindableClustersTPC;
-        break;
-      case V0PhotonCuts::kTPCChi2NDF:
-        LOG(info) << mCutNames[i] << " < " << mMaxChi2PerClusterTPC;
-        break;
-      case V0PhotonCuts::kDCAxy:
-        LOG(info) << mCutNames[i] << " < " << mMaxDcaXY;
-        break;
-      case V0PhotonCuts::kDCAz:
-        LOG(info) << mCutNames[i] << " < " << mMaxDcaZ;
-        break;
-      default:
-        LOG(fatal) << "Cut unknown!";
-    }
-  }
+  mDisableITSonly = flag;
+  LOG(info) << "V0 Photon Cut, disable ITS only track: " << mDisableITSonly;
 }

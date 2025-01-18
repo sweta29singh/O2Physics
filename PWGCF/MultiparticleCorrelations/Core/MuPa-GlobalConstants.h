@@ -8,11 +8,15 @@
 // In applying this license CERN does not waive the privileges and immunities
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
+
 #ifndef PWGCF_MULTIPARTICLECORRELATIONS_CORE_MUPA_GLOBALCONSTANTS_H_
 #define PWGCF_MULTIPARTICLECORRELATIONS_CORE_MUPA_GLOBALCONSTANTS_H_
 
-const Int_t gMaxCorrelator = 8;
-const Int_t gMaxHarmonic = 6;
-const Int_t gMaxIndex = 300; // per order, used only in Test0
+const Int_t gMaxCorrelator = 12;
+const Int_t gMaxHarmonic = 9;
+const Int_t gMaxIndex = 300;              // per order, used only in Test0
+const Int_t gMaxNoBinsKine = 1000;        // max number of bins for differential q-vector
+const Int_t gMaxBinsDiffWeights = 100;    // max number of bins for differential weights, see MakeWeights.C
+const Int_t gMaxNumberEtaSeparations = 9; // max number of different eta separations used to calculated 2p corr. with eta separations
 
 #endif // PWGCF_MULTIPARTICLECORRELATIONS_CORE_MUPA_GLOBALCONSTANTS_H_

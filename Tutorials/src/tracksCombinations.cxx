@@ -30,7 +30,7 @@ namespace hash
 {
 DECLARE_SOA_COLUMN(Bin, bin, int);
 } // namespace hash
-DECLARE_SOA_TABLE(Hashes, "AOD", "HASH", hash::Bin);
+DECLARE_SOA_TABLE(MixingHashes, "AOD", "HASH", hash::Bin);
 
 } // namespace o2::aod
 
@@ -88,10 +88,35 @@ struct ConfigurableBinnedCollisionCombinations {
   }
 };
 
+struct BinnedTrackPartitionsCombinations {
+  std::vector<double> xBins{VARIABLE_WIDTH, -0.064, -0.062, -0.060, 0.066, 0.068, 0.070, 0.072};
+  std::vector<double> yBins{VARIABLE_WIDTH, -0.320, -0.301, -0.300, 0.330, 0.340, 0.350, 0.360};
+  ColumnBinningPolicy<aod::track::X, aod::track::Y> trackBinning{{xBins, yBins}, true};
+  Configurable<float> philow{"phiLow", 1.0f, "lowest phi"};
+
+  void process(aod::Tracks const& tracks)
+  {
+    Partition<aod::Tracks> leftPhi = aod::track::phi < philow;
+    Partition<aod::Tracks> rightPhi = aod::track::phi >= philow;
+    leftPhi.bindTable(tracks);
+    rightPhi.bindTable(tracks);
+
+    int count = 0;
+    // Strictly upper tracks binned by x and y position
+    for (auto& [t0, t1] : selfCombinations(trackBinning, 5, -1, leftPhi, rightPhi)) {
+      int bin = trackBinning.getBin({t0.x(), t0.y()});
+      LOGF(info, "Tracks bin: %d pair: %d (%f, %f, %f) phi %f, %d (%f, %f, %f) phi %f", bin, t0.index(), t0.x(), t0.y(), t0.z(), t0.phi(), t1.index(), t1.x(), t1.y(), t1.z(), t1.phi());
+      count++;
+      if (count > 100)
+        break;
+    }
+  }
+};
+
 struct HashTask {
   std::vector<float> xBins{-0.064f, -0.062f, -0.060f, 0.066f, 0.068f, 0.070f, 0.072};
   std::vector<float> yBins{-0.320f, -0.301f, -0.300f, 0.330f, 0.340f, 0.350f, 0.360};
-  Produces<aod::Hashes> hashes;
+  Produces<aod::MixingHashes> hashes;
 
   // Calculate hash for an element based on 2 properties and their bins.
   int getHash(const std::vector<float>& xBins, const std::vector<float>& yBins, float colX, float colY)
@@ -129,7 +154,7 @@ struct HashTask {
 struct BinnedTrackCombinationsWithHashTable {
   NoBinningPolicy<aod::hash::Bin> hashBin;
 
-  void process(soa::Join<aod::Hashes, aod::Tracks> const& hashedTracks)
+  void process(soa::Join<aod::MixingHashes, aod::Tracks> const& hashedTracks)
   {
     int count = 0;
     // Strictly upper categorised tracks
@@ -149,6 +174,7 @@ WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
     adaptAnalysisTask<TrackCombinations>(cfgc),
     adaptAnalysisTask<BinnedTrackCombinations>(cfgc),
     adaptAnalysisTask<ConfigurableBinnedCollisionCombinations>(cfgc),
+    adaptAnalysisTask<BinnedTrackPartitionsCombinations>(cfgc),
     adaptAnalysisTask<HashTask>(cfgc),
     adaptAnalysisTask<BinnedTrackCombinationsWithHashTable>(cfgc),
   };

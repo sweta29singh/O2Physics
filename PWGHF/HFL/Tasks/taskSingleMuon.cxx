@@ -56,8 +56,8 @@ struct HfTaskSingleMuonSelectionAmbiguousMftIndexBuilder {
 };
 
 struct HfTaskSingleMuon {
-  Configurable<uint8_t> trkType{"trkType", 0, "Muon track type, valid values are 0, 1, 2, 3 and 4"};
-  Configurable<uint8_t> mcMaskSelection{"mcMaskSelection", 0, "McMask for correct match, valid values are 0 and 128"};
+  Configurable<uint> trkType{"trkType", 0u, "Muon track type, valid values are 0, 1, 2, 3 and 4"};
+  Configurable<uint> mcMaskSelection{"mcMaskSelection", 0u, "McMask for correct match, valid values are 0 and 128"};
   Configurable<float> etaMin{"etaMin", -3.6, "eta minimum value"};
   Configurable<float> etaMax{"etaMax", -2.5, "eta maximum value"};
   Configurable<float> pDcaMin{"pDcaMin", 324., "p*DCA maximum value for small Rabs"};
@@ -116,7 +116,7 @@ struct HfTaskSingleMuon {
   }
 
   template <typename TCollision, typename TMFT, typename TMuons>
-  void runMuonSel(TCollision const& collision, TMFT const& tracksMFT, TMuons const& muons)
+  void runMuonSel(TCollision const& collision, TMFT const& /*tracksMFT*/, TMuons const& muons)
   {
     if (!collision.sel8()) {
       return;
@@ -133,16 +133,18 @@ struct HfTaskSingleMuon {
       const auto charge(muon.sign());
       const auto chi2(muon.chi2MatchMCHMFT());
 
-      auto trkMFT = muon.template matchMFTTrack_as<MFTTracksExtra>();
-      if (reduceAmbMft && trkMFT.has_ambMftTrack()) {
-        continue;
-      }
-      if (reduceOrphMft && (!reduceAmbMft) && trkMFT.has_ambMftTrack()) {
-        continue;
+      if (muon.has_matchMFTTrack()) {
+        auto trkMFT = muon.template matchMFTTrack_as<MFTTracksExtra>();
+        if (reduceAmbMft && trkMFT.has_ambMftTrack()) {
+          continue;
+        }
+        if (reduceOrphMft && (!reduceAmbMft) && trkMFT.has_ambMftTrack()) {
+          continue;
+        }
       }
       // histograms before the acceptance cuts
       registry.fill(HIST("hMuBeforeCuts"), pt, eta, dcaXY, pDca, charge, chi2);
-      if (muon.matchMCHTrackId() > 0) {
+      if (muon.has_matchMCHTrack()) {
         auto muonType3 = muon.template matchMCHTrack_as<MyMuons>();
         registry.fill(HIST("h3DeltaPtBeforeCuts"), pt, eta, muonType3.pt() - pt);
       }
@@ -165,7 +167,7 @@ struct HfTaskSingleMuon {
       // histograms after acceptance cuts
       registry.fill(HIST("hMuAfterCuts"), pt, eta, dcaXY, pDca, charge, chi2);
       registry.fill(HIST("h2DCA"), muon.fwdDcaX(), muon.fwdDcaY());
-      if (muon.matchMCHTrackId() > 0) {
+      if (muon.has_matchMCHTrack()) {
         auto muonType3 = muon.template matchMCHTrack_as<MyMuons>();
         registry.fill(HIST("h3DeltaPtAfterCuts"), pt, eta, muonType3.pt() - pt);
       }
@@ -173,7 +175,7 @@ struct HfTaskSingleMuon {
   }
 
   template <typename TCollision, typename TMFT, typename TMuons, typename TMC>
-  void runMuonSelMc(TCollision const& collision, TMFT const& tracksMFT, TMuons const& muons, TMC const& mc)
+  void runMuonSelMc(TCollision const& collision, TMFT const& /*tracksMFT*/, TMuons const& muons, TMC const& /*mc*/)
   {
     if (!collision.sel8()) {
       return;
@@ -190,16 +192,18 @@ struct HfTaskSingleMuon {
       const auto charge(muon.sign());
       const auto chi2(muon.chi2MatchMCHMFT());
 
-      auto trkMFT = muon.template matchMFTTrack_as<MFTTracksExtra>();
-      if (reduceAmbMft && trkMFT.has_ambMftTrack()) {
-        continue;
-      }
-      if (reduceOrphMft && (!reduceAmbMft) && trkMFT.has_ambMftTrack()) {
-        continue;
+      if (muon.has_matchMFTTrack()) {
+        auto trkMFT = muon.template matchMFTTrack_as<MFTTracksExtra>();
+        if (reduceAmbMft && trkMFT.has_ambMftTrack()) {
+          continue;
+        }
+        if (reduceOrphMft && (!reduceAmbMft) && trkMFT.has_ambMftTrack()) {
+          continue;
+        }
       }
       // histograms before the acceptance cuts
       registry.fill(HIST("hMuBeforeCuts"), pt, eta, dcaXY, pDca, charge, chi2);
-      if (muon.matchMCHTrackId() > 0) {
+      if (muon.has_matchMCHTrack()) {
         auto muonType3 = muon.template matchMCHTrack_as<MyMcMuons>();
         registry.fill(HIST("h3DeltaPtBeforeCuts"), pt, eta, muonType3.pt() - pt);
       }
@@ -221,7 +225,7 @@ struct HfTaskSingleMuon {
       // histograms after acceptance cuts
       registry.fill(HIST("hMuAfterCuts"), pt, eta, dcaXY, pDca, charge, chi2);
       registry.fill(HIST("h2DCA"), muon.fwdDcaX(), muon.fwdDcaY());
-      if (muon.matchMCHTrackId() > 0) {
+      if (muon.has_matchMCHTrack()) {
         auto muonType3 = muon.template matchMCHTrack_as<MyMcMuons>();
         registry.fill(HIST("h3DeltaPtAfterCuts"), pt, eta, muonType3.pt() - pt);
       }

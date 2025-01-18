@@ -29,14 +29,34 @@ o2physics_add_dpl_workflow(task-bplus-reduced
                     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
                     COMPONENT_NAME Analysis)
 
+o2physics_add_dpl_workflow(task-bs-reduced
+                    SOURCES taskBsReduced.cxx
+                    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
+                    COMPONENT_NAME Analysis)
+
 o2physics_add_dpl_workflow(task-bs
                     SOURCES taskBs.cxx
+                    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
+                    COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(task-charm-polarisation
+                    SOURCES taskCharmPolarisation.cxx
+                    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
+                    COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(task-charm-reso-reduced
+                    SOURCES taskCharmResoReduced.cxx
                     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
                     COMPONENT_NAME Analysis)
 
 o2physics_add_dpl_workflow(task-d0
                     SOURCES taskD0.cxx
                     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
+                    COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(task-directed-flow-charm-hadrons
+                    SOURCES taskDirectedFlowCharmHadrons.cxx
+                    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2Physics::EventFilteringUtils
                     COMPONENT_NAME Analysis)
 
 o2physics_add_dpl_workflow(task-dplus
@@ -47,6 +67,16 @@ o2physics_add_dpl_workflow(task-dplus
 o2physics_add_dpl_workflow(task-ds
                     SOURCES taskDs.cxx
                     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
+                    COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(task-dstar-to-d0-pi
+                    SOURCES taskDstarToD0Pi.cxx
+                    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
+                    COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(task-flow-charm-hadrons
+                    SOURCES taskFlowCharmHadrons.cxx
+                    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2Physics::EventFilteringUtils
                     COMPONENT_NAME Analysis)
 
 o2physics_add_dpl_workflow(task-lb
@@ -64,18 +94,23 @@ o2physics_add_dpl_workflow(task-lc-to-k0s-p
                     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
                     COMPONENT_NAME Analysis)
 
-o2physics_add_dpl_workflow(task-omegac-st
-                    SOURCES taskOmegacSt.cxx
-                    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2::DCAFitter
-                    COMPONENT_NAME Analysis)
-
 o2physics_add_dpl_workflow(task-sigmac
                     SOURCES taskSigmac.cxx
                     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
                     COMPONENT_NAME Analysis)
 
+o2physics_add_dpl_workflow(task-sigmac-to-cascade
+                    SOURCES taskSigmacToCascade.cxx
+                    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
+                    COMPONENT_NAME Analysis)
+
 o2physics_add_dpl_workflow(task-xic
                     SOURCES taskXic.cxx
+                    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
+                    COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(task-xic-to-xi-pi-pi
+                    SOURCES taskXicToXiPiPi.cxx
                     PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
                     COMPONENT_NAME Analysis)
 

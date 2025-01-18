@@ -13,3 +13,48 @@ o2physics_add_dpl_workflow(flow-pt-efficiency
                     SOURCES flowPtEfficiency.cxx
                     PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
                     COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(flow-task
+                    SOURCES flowTask.cxx
+                    PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::AnalysisCCDB O2Physics::GFWCore
+                    COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(flow-runby-run
+                    SOURCES flowRunbyRun.cxx
+                    PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::AnalysisCCDB O2Physics::GFWCore
+                    COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(flow-gfw-pbpb
+                    SOURCES FlowGFWPbPb.cxx
+                    PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::GFWCore
+                    COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(flow-zdc-task
+                    SOURCES FlowZDCtask.cxx
+                    PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::GFWCore
+                    COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(flow-gf
+                    SOURCES flowAnalysisGF.cxx
+                    PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::GFWCore
+                    COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(flow-pbpb-pikp
+                    SOURCES flowPbpbPikp.cxx
+                    PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::GFWCore
+                    COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(flow-gfw-omegaxi
+                    SOURCES flowGFWOmegaXi.cxx
+                    PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::GFWCore
+                    COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(flow-pid-cme
+                    SOURCES pidcme.cxx
+                    PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::GFWCore
+                    COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(flow-sp
+                    SOURCES flowSP.cxx
+                    PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::GFWCore
+                    COMPONENT_NAME Analysis)

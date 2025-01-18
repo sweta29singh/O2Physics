@@ -16,16 +16,6 @@
 #ifndef PWGLF_DATAMODEL_V0QAANALYSIS_H_
 #define PWGLF_DATAMODEL_V0QAANALYSIS_H_
 
-#include "Framework/runDataProcessing.h"
-#include "Common/DataModel/TrackSelectionTables.h"
-#include "PWGLF/DataModel/LFStrangenessTables.h"
-#include "Common/DataModel/Multiplicity.h"
-#include "Common/DataModel/Centrality.h"
-
-using namespace o2;
-using namespace o2::framework;
-using namespace o2::framework::expressions;
-
 namespace o2::aod
 {
 
@@ -67,6 +57,9 @@ DECLARE_SOA_COLUMN(PDGCode, pdgcode, int);
 DECLARE_SOA_COLUMN(IsPhysicalPrimary, isphysprimary, bool);
 DECLARE_SOA_COLUMN(MultFT0M, multft0m, float);
 DECLARE_SOA_COLUMN(MultFV0A, multfv0a, float);
+DECLARE_SOA_COLUMN(EvFlag, evflag, int);
+DECLARE_SOA_COLUMN(Alpha, alpha, float);
+DECLARE_SOA_COLUMN(QtArm, qtarm, float);
 
 } // namespace myv0candidates
 
@@ -81,7 +74,8 @@ DECLARE_SOA_TABLE(MyV0Candidates, "AOD", "MYV0CANDIDATES", o2::soa::Index<>,
                   myv0candidates::NTOFSigmaNegPr, myv0candidates::NTOFSigmaPosPr, myv0candidates::NTOFSigmaNegPi, myv0candidates::NTOFSigmaPosPi,
                   myv0candidates::PosHasTOF, myv0candidates::NegHasTOF,
                   myv0candidates::PDGCode, myv0candidates::IsPhysicalPrimary,
-                  myv0candidates::MultFT0M, myv0candidates::MultFV0A);
+                  myv0candidates::MultFT0M, myv0candidates::MultFV0A,
+                  myv0candidates::EvFlag, myv0candidates::Alpha, myv0candidates::QtArm);
 
 } // namespace o2::aod
 

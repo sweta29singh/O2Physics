@@ -14,8 +14,18 @@ o2physics_add_dpl_workflow(table-reader
                     PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::PWGDQCore
                     COMPONENT_NAME Analysis)
 
+o2physics_add_dpl_workflow(table-reader-with-assoc
+                    SOURCES tableReader_withAssoc.cxx
+                    PUBLIC_LINK_LIBRARIES O2::Framework O2::DetectorsBase O2Physics::AnalysisCore O2Physics::AnalysisCCDB O2Physics::PWGDQCore
+                    COMPONENT_NAME Analysis)
+
 o2physics_add_dpl_workflow(efficiency
                     SOURCES dqEfficiency.cxx
+                    PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::PWGDQCore
+                    COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(efficiency-with-assoc
+                    SOURCES dqEfficiency_withAssoc.cxx
                     PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::PWGDQCore
                     COMPONENT_NAME Analysis)
 
@@ -49,7 +59,57 @@ o2physics_add_dpl_workflow(flow
                     PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::PWGDQCore O2Physics::GFWCore
                     COMPONENT_NAME Analysis)
 
-o2physics_add_dpl_workflow(task-jpsi-hf
-                    SOURCES taskJpsiHf.cxx
+o2physics_add_dpl_workflow(task-muon-mch-trk-eff
+                    SOURCES taskMuonMchTrkEfficiency.cxx
                     PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
+                    COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(task-j-psi-hf
+                    SOURCES taskJpsiHf.cxx
+                    PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::PWGDQCore
+                    COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(task-muon-dca
+                    SOURCES muonDCA.cxx
+                    PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::PWGDQCore
+                    COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(correlation
+                    SOURCES dqCorrelation.cxx
+                    PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::PWGDQCore O2Physics::GFWCore
+                    COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(task-mch-align-record
+                    SOURCES mchAlignRecord.cxx
+                    PUBLIC_LINK_LIBRARIES
+                        O2::Framework
+                        O2Physics::AnalysisCore
+                        O2Physics::PWGDQCore
+                        O2::CommonUtils
+                        O2::MCHClustering
+                        O2::DPLUtils
+                        O2::CCDB
+                        O2::DataFormatsParameters
+                        O2::MCHBase
+                        O2::MCHTracking
+                        O2::DataFormatsMCH
+                        O2::DetectorsBase
+                        O2::MCHGeometryTransformer
+                        O2::MathUtils
+                        O2::MCHAlign
+                    COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(task-muon-mid-eff
+                    SOURCES MIDefficiency.cxx
+                    PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2::MIDBase
+                    COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(task-fwd-track-pid
+                    SOURCES taskFwdTrackPid.cxx
+                    PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::PWGDQCore
+                    COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(quarkonia-to-hyperons
+                    SOURCES quarkoniaToHyperons.cxx
+                    PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore O2Physics::MLCore O2Physics::EventFilteringUtils
                     COMPONENT_NAME Analysis)

@@ -15,6 +15,8 @@
 #ifndef PWGEM_PHOTONMESON_UTILS_TRACKSELECTION_H_
 #define PWGEM_PHOTONMESON_UTILS_TRACKSELECTION_H_
 
+#include "TPDGCode.h"
+
 namespace o2::pwgem::photonmeson
 {
 
@@ -201,6 +203,34 @@ template <typename TTrack>
 inline bool isTPConly_ITSonly(TTrack const& track0, TTrack const& track1)
 {
   return (isTPConlyTrack(track0) && isITSonlyTrack(track1)) || (isTPConlyTrack(track1) && isITSonlyTrack(track0));
+}
+
+/**
+ * @brief Check if MC particles have the expected&same mother particle
+ *
+ * @param mc1 MCParticle 0
+ * @param mc2 MCParticle 1
+ * @return true if the mother particle is the expected type and the same for both
+ */
+template <PDG_t motherType, typename T>
+inline bool checkMCParticles(T const& mc1, T const& mc2)
+{
+  if (abs(mc1.pdgCode()) != kElectron || abs(mc2.pdgCode()) != kElectron) {
+    return false;
+  }
+  if (!mc1.has_mothers() || !mc2.has_mothers()) {
+    return false;
+  }
+  if (mc1.mothersIds()[0] != mc2.mothersIds()[0]) {
+    return false;
+  }
+  if (const auto& mothers = mc1.template mothers_as<typename T::parent_t>(); mothers.empty() || mothers.size() > 1) {
+    return false;
+  }
+  if (mc1.template mothers_first_as<typename T::parent_t>().pdgCode() != motherType) {
+    return false;
+  }
+  return true;
 }
 } // namespace o2::pwgem::photonmeson
 

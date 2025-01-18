@@ -114,9 +114,13 @@ struct AccessMcTruth {
 
   // group according to reconstructed Collisions
   void process(soa::Join<aod::Collisions, aod::McCollisionLabels>::iterator const& collision, soa::Join<aod::Tracks, aod::McTrackLabels> const& tracks,
-               aod::McParticles const& mcParticles, aod::McCollisions const& mcCollisions)
+               aod::McParticles const& /*mcParticles*/, aod::McCollisions const& /*mcCollisions*/)
   {
     // access MC truth information with mcCollision() and mcParticle() methods
+    if (!collision.has_mcCollision()) {
+      LOGF(warning, "No MC collision for this collision, skip...");
+      return;
+    }
     if (reduceOutput < 2) {
       LOGF(info, "vtx-z (data) = %f | vtx-z (MC) = %f", collision.posZ(), collision.mcCollision().posZ());
     }

@@ -38,12 +38,6 @@ using namespace o2::framework;
 using namespace o2::framework::expressions;
 using namespace o2::soa;
 
-using namespace o2::aod::hf_cand;
-using namespace o2::aod::hf_correlation_d_dbar;
-using namespace o2::aod::hf_cand_2prong;
-using namespace o2::analysis::hf_cuts_d0_to_pi_k;
-using namespace o2::constants::math;
-
 namespace
 {
 static constexpr int nPart = 2;                                                                         // number of particle types (for us it will be proton and phi)
@@ -273,7 +267,7 @@ struct femtoWorldPairTaskTrackD0 {
     }
   }
 
-  void processD0mesons(o2::aod::FemtoWorldCollision& col, o2::aod::FemtoWorldParticles& parts)
+  void processD0mesons(o2::aod::FemtoWorldCollision& col, o2::aod::FemtoWorldParticles&)
   {
     auto groupPartsD0D0bar = partsD0D0barMesons->sliceByCached(aod::femtoworldparticle::femtoWorldCollisionId, col.globalIndex(), cache);
     auto groupPartsD0D0barDaugh = partsD0D0barDaughters->sliceByCached(aod::femtoworldparticle::femtoWorldCollisionId, col.globalIndex(), cache);
@@ -323,7 +317,7 @@ struct femtoWorldPairTaskTrackD0 {
   /// This function processes the same event and takes care of all the histogramming
   /// \todo the trivial loops over the tracks should be factored out since they will be common to all combinations of T-T, T-Phi, Phi-Phi, ...
   void processSameEvent(o2::aod::FemtoWorldCollision& col,
-                        o2::aod::FemtoWorldParticles& parts)
+                        o2::aod::FemtoWorldParticles&)
   {
     // const auto& magFieldTesla = col.magField();
     auto groupPartsOne = partsOne->sliceByCached(aod::femtoworldparticle::femtoWorldCollisionId, col.globalIndex(), cache);
@@ -357,7 +351,7 @@ struct femtoWorldPairTaskTrackD0 {
   /// This function processes the mixed event
   /// \todo the trivial loops over the collisions and tracks should be factored out since they will be common to all combinations of T-T, T-Phi, Phi-Phi, ...
   void processMixedEvent(o2::aod::FemtoWorldCollisions& cols,
-                         o2::aod::FemtoWorldParticles& parts)
+                         o2::aod::FemtoWorldParticles&)
   {
     ColumnBinningPolicy<aod::collision::PosZ, aod::femtoworldcollision::MultV0M> colBinning{{CfgVtxBins, CfgMultBins}, true};
 

@@ -14,7 +14,12 @@
 #include <map>
 #include <memory>
 #include <vector>
+#include <string>
 
+#include "CCDB/BasicCCDBManager.h"
+#include "Common/DataModel/EventSelection.h"
+#include "DataFormatsPHOS/Cell.h"
+#include "DataFormatsPHOS/CalibParams.h"
 #include "Framework/ConfigParamSpec.h"
 #include "Framework/runDataProcessing.h"
 #include "Framework/AnalysisTask.h"
@@ -34,12 +39,24 @@
 /// - Amplitude distribution
 /// - Time distribution
 /// - Count rate in 2D representation
+
+using namespace o2;
+using namespace o2::aod::evsel;
+using namespace o2::framework;
+using namespace o2::framework::expressions;
+
 struct phosCellQA {
 
-  o2::framework::Configurable<double> mMinCellAmplitude{"minCellAmplitude", 0., "Minimum cell amplitude for histograms."};
-  o2::framework::Configurable<double> mMinCellTimeMain{"minCellTimeMain", -50, "Min. cell time of main bunch selection"};
-  o2::framework::Configurable<double> mMaxCellTimeMain{"maxCellTimeMain", 100, "Max. cell time of main bunch selection"};
-  o2::framework::Configurable<int> mVetoBCID{"vetoBCID", -1, "BC ID to be excluded"};
+  Service<o2::ccdb::BasicCCDBManager> ccdb;
+
+  ConfigurableAxis amplitudeAxisLarge{"amplitude", {1000, 0., 10.}, "Amplutude (GeV)"};
+  ConfigurableAxis timeAxisLarge{"celltime", {1000, -1500.e-9, 3500.e-9}, "cell time (ns)"};
+  Configurable<int> mEvSelTrig{"mEvSelTrig", kTVXinPHOS, "Select events with this trigger"};
+  Configurable<double> mMinCellAmplitude{"minCellAmplitude", 0.5, "Minimum cell energy for histograms (GeV)"};
+  Configurable<double> mMinCellTimeMain{"minCellTimeMain", -50, "Min. cell time of main bunch selection"};
+  Configurable<double> mMaxCellTimeMain{"maxCellTimeMain", 100, "Max. cell time of main bunch selection"};
+  Configurable<int> mVetoBCID{"vetoBCID", -1, "BC ID to be excluded"};
+  Configurable<std::string> mCalibPath{"calibPath", "PHS/Calib/CalibParams", "path to Calibration snapshot"};
 
   o2::framework::HistogramRegistry mHistManager{"phosCallQAHistograms"};
 
@@ -53,9 +70,8 @@ struct phosCellQA {
     const o2Axis
       cellXAxis{64, 0., 64, "x", ""},
       cellZAxis{56, 0., 56, "z", ""},
-      amplitudeAxisLarge{1000, 0., 1000., "amplitude", "Amplutude (GeV)"},
-      timeAxisLarge{1000, -1500.e-9, 3500.e-9, "celltime", "cell time (ns)"},
       bcAxis{3501, -0.5, 3500.5};
+
     mHistManager.add("eventsAll", "Number of events", o2HistType::kTH1F, {{1, 0.5, 1.5}});
     mHistManager.add("eventsSelected", "Number of events", o2HistType::kTH1F, {{1, 0.5, 1.5}});
     mHistManager.add("eventBCAll", "Bunch crossing ID of event (all events)", o2HistType::kTH1F, {bcAxis});
@@ -76,10 +92,21 @@ struct phosCellQA {
     LOG(info) << "Cell monitor task configured ...";
   }
 
+  using BCsWithBcSels = soa::Join<aod::BCs, aod::Timestamps, aod::BcSels>;
+
   /// \brief Process PHOS data
-  void process(o2::aod::Calos const& cells, o2::aod::BCs const& bcs)
+  void process(o2::aod::Calos const& cells, BCsWithBcSels const& bcs)
   {
     LOG(debug) << "Processing next event";
+
+    int64_t timestamp = 0;
+    if (bcs.begin() != bcs.end()) {
+      timestamp = bcs.begin().timestamp(); // timestamp for CCDB object retrieval
+    } else {
+      return;
+    }
+    const o2::phos::CalibParams* calibParams = ccdb->getForTimeStamp<o2::phos::CalibParams>(mCalibPath, timestamp);
+
     for (const auto& bc : bcs) {
       o2::InteractionRecord eventIR;
       eventIR.setFromLong(bc.globalBC());
@@ -94,46 +121,57 @@ struct phosCellQA {
       if (cell.caloType() != 0)
         continue;
       o2::InteractionRecord cellIR;
-      cellIR.setFromLong(cell.bc().globalBC());
+      cellIR.setFromLong(cell.bc_as<BCsWithBcSels>().globalBC());
       mHistManager.fill(HIST("cellBCAll"), cellIR.bc);
       if (mVetoBCID >= 0 && cellIR.bc == mVetoBCID)
         continue;
       mHistManager.fill(HIST("cellBCSelected"), cellIR.bc);
-      //       mHistManager.fill(HIST("cellAmplitude"), cell.amplitude(), cell.cellNumber());
-      if (cell.amplitude() < mMinCellAmplitude)
+
+      if (!cell.bc_as<BCsWithBcSels>().alias_bit(mEvSelTrig))
+        continue;
+
+      // bool isHighGain = cell.cellType();
+      double energy = calibParams->getGain(cell.cellNumber()) * cell.amplitude();
+      // if (isHighGain) {
+      //    energy = calibParams->getGain(cell.cellNumber()) * cell.amplitude();
+      // } else {
+      //    energy = calibParams->getGain(cell.cellNumber()) * cell.amplitude() * calibParams->getHGLGRatio(cell.cellNumber());
+      // }
+
+      if (energy < mMinCellAmplitude)
         continue;
       char relid[3];
       o2::phos::Geometry::absToRelNumbering(cell.cellNumber(), relid);
       if (relid[0] == 1) {
         mHistManager.fill(HIST("cellOccM1"), relid[1] - 0.5, relid[2] - 0.5);
-        mHistManager.fill(HIST("cellAmpM1"), relid[1] - 0.5, relid[2] - 0.5, cell.amplitude());
+        mHistManager.fill(HIST("cellAmpM1"), relid[1] - 0.5, relid[2] - 0.5, energy);
         mHistManager.fill(HIST("cellTimeM1"), relid[1] - 0.5, relid[2] - 0.5, cell.time());
         if (cell.time() > mMinCellTimeMain && cell.time() < mMaxCellTimeMain) {
-          mHistManager.fill(HIST("cellAmpTimeM1"), cell.time(), cell.amplitude());
+          mHistManager.fill(HIST("cellAmpTimeM1"), cell.time(), energy);
         }
       }
       if (relid[0] == 2) {
         mHistManager.fill(HIST("cellOccM2"), relid[1] - 0.5, relid[2] - 0.5);
-        mHistManager.fill(HIST("cellAmpM2"), relid[1] - 0.5, relid[2] - 0.5, cell.amplitude());
+        mHistManager.fill(HIST("cellAmpM2"), relid[1] - 0.5, relid[2] - 0.5, energy);
         mHistManager.fill(HIST("cellTimeM2"), relid[1] - 0.5, relid[2] - 0.5, cell.time());
         if (cell.time() > mMinCellTimeMain && cell.time() < mMaxCellTimeMain) {
-          mHistManager.fill(HIST("cellAmpTimeM2"), cell.time(), cell.amplitude());
+          mHistManager.fill(HIST("cellAmpTimeM2"), cell.time(), energy);
         }
       }
       if (relid[0] == 3) {
         mHistManager.fill(HIST("cellOccM3"), relid[1] - 0.5, relid[2] - 0.5);
-        mHistManager.fill(HIST("cellAmpM3"), relid[1] - 0.5, relid[2] - 0.5, cell.amplitude());
+        mHistManager.fill(HIST("cellAmpM3"), relid[1] - 0.5, relid[2] - 0.5, energy);
         mHistManager.fill(HIST("cellTimeM3"), relid[1] - 0.5, relid[2] - 0.5, cell.time());
         if (cell.time() > mMinCellTimeMain && cell.time() < mMaxCellTimeMain) {
-          mHistManager.fill(HIST("cellAmpTimeM3"), cell.time(), cell.amplitude());
+          mHistManager.fill(HIST("cellAmpTimeM3"), cell.time(), energy);
         }
       }
       if (relid[0] == 4) {
         mHistManager.fill(HIST("cellOccM4"), relid[1] - 0.5, relid[2] - 0.5);
-        mHistManager.fill(HIST("cellAmpM4"), relid[1] - 0.5, relid[2] - 0.5, cell.amplitude());
+        mHistManager.fill(HIST("cellAmpM4"), relid[1] - 0.5, relid[2] - 0.5, energy);
         mHistManager.fill(HIST("cellTimeM4"), relid[1] - 0.5, relid[2] - 0.5, cell.time());
         if (cell.time() > mMinCellTimeMain && cell.time() < mMaxCellTimeMain) {
-          mHistManager.fill(HIST("cellAmpTimeM4"), cell.time(), cell.amplitude());
+          mHistManager.fill(HIST("cellAmpTimeM4"), cell.time(), energy);
         }
       }
     }

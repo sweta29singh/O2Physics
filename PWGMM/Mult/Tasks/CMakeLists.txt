@@ -34,6 +34,11 @@ o2physics_add_dpl_workflow(dndeta-mft
                     PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
                     COMPONENT_NAME Analysis)
 
+o2physics_add_dpl_workflow(dndeta-mft-pbpb
+                    SOURCES dndeta-mft-pbpb.cxx
+                    PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
+                    COMPONENT_NAME Analysis)
+
 o2physics_add_dpl_workflow(flatenicity-fv0
                     SOURCES flatenicityFV0.cxx
                     PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
@@ -59,3 +64,18 @@ o2physics_add_dpl_workflow(heavy-ion-mult
                     SOURCES heavy-ion-mult.cxx
                     PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore
                     COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(multiplicity-pb-pb
+                  SOURCES multiplicityPbPb.cxx
+                  PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
+                  COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(mcdata-split
+                  SOURCES mcdata_split_test.cxx
+                  PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
+                  COMPONENT_NAME Analysis)
+
+o2physics_add_dpl_workflow(flattenicty-chrg
+                  SOURCES flattenicty-chrg.cxx
+                  PUBLIC_LINK_LIBRARIES O2Physics::AnalysisCore
+                  COMPONENT_NAME Analysis)

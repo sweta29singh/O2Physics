@@ -49,13 +49,13 @@ struct BCRangeSelector {
 
   void run(ProcessingContext& pc)
   {
-    auto bcConsumer = pc.inputs().get<TableConsumer>(aod::MetadataTrait<std::decay_t<aod::BCs>>::metadata::tableLabel());
+    auto bcConsumer = pc.inputs().get<TableConsumer>(o2::soa::getTableLabel<aod::BCs>());
     auto bcTable{bcConsumer->asArrowTable()};
-    auto collConsumer = pc.inputs().get<TableConsumer>(aod::MetadataTrait<std::decay_t<aod::Collisions>>::metadata::tableLabel());
+    auto collConsumer = pc.inputs().get<TableConsumer>(o2::soa::getTableLabel<aod::Collisions>());
     auto collTable{collConsumer->asArrowTable()};
-    auto evSelConsumer = pc.inputs().get<TableConsumer>(aod::MetadataTrait<std::decay_t<aod::EvSels>>::metadata::tableLabel());
+    auto evSelConsumer = pc.inputs().get<TableConsumer>(o2::soa::getTableLabel<aod::EvSels>());
     auto evSelTable{evSelConsumer->asArrowTable()};
-    auto cefpConsumer = pc.inputs().get<TableConsumer>(aod::MetadataTrait<std::decay_t<aod::CefpDecisions>>::metadata::tableLabel());
+    auto cefpConsumer = pc.inputs().get<TableConsumer>(o2::soa::getTableLabel<aod::CefpDecisions>());
     auto cefpTable{cefpConsumer->asArrowTable()};
 
     auto bcs = aod::BCs({bcTable});
@@ -76,7 +76,7 @@ struct BCRangeSelector {
     std::vector<IRFrame> bcRanges;
     int nColl{0}, nSelected{0};
     for (auto collision : cols) {
-      if (filt.cefpSelected()) {
+      if (filt.cefpSelected0() || filt.cefpSelected1()) {
         if (firstSelectedCollision < 0) {
           firstSelectedCollision = nColl;
         }
@@ -127,7 +127,7 @@ struct BCRangeSelector {
   }
 
   // need a trivial process method: the parameters determine the tables available in the input
-  void process(CCs const& collisions, aod::BCs const& bcs, aod::CefpDecisions const& fdecisions)
+  void process(CCs const& /*collisions*/, aod::BCs const&, aod::CefpDecisions const&)
   {
   }
 };

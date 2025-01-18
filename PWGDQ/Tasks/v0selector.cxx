@@ -19,6 +19,8 @@
 //
 #include <array>
 #include <map>
+#include <string>
+#include <memory>
 #include "Math/Vector4D.h"
 #include "Framework/runDataProcessing.h"
 #include "Framework/AnalysisTask.h"
@@ -35,6 +37,9 @@
 #include "Common/Core/RecoDecay.h"
 #include "DCAFitter/DCAFitterN.h"
 #include "PWGDQ/DataModel/ReducedInfoTables.h"
+#include "PWGDQ/Core/VarManager.h"
+#include "PWGDQ/Core/HistogramManager.h"
+#include "PWGDQ/Core/HistogramsLibrary.h"
 #include "DetectorsBase/Propagator.h"
 #include "DetectorsBase/GeometryManager.h"
 #include "DataFormatsParameters/GRPObject.h"
@@ -46,11 +51,39 @@ using namespace o2::framework;
 using namespace o2::framework::expressions;
 using std::array;
 
-using FullTracksExt = soa::Join<aod::Tracks, aod::TracksCov, aod::TracksExtra, aod::TracksDCA,
+/*using FullTracksExt = soa::Join<aod::Tracks, aod::TracksCov, aod::TracksExtra, aod::TracksDCA,
+                                aod::pidTPCFullEl, aod::pidTPCFullPi,
+                                aod::pidTPCFullKa, aod::pidTPCFullPr>;*/
+using FullTracksExt = soa::Join<aod::Tracks, aod::TracksExtra, aod::TracksDCA,
                                 aod::pidTPCFullEl, aod::pidTPCFullPi,
                                 aod::pidTPCFullKa, aod::pidTPCFullPr>;
 
+constexpr static uint32_t gkTrackFillMap = VarManager::ObjTypes::Track | VarManager::ObjTypes::TrackExtra | VarManager::ObjTypes::TrackTPCPID;
+
 struct v0selector {
+
+  // Configurables for curved QT cut
+  //  Gamma cuts
+  Configurable<float> cutAlphaG{"cutAlphaG", 0.4, "cutAlphaG"};
+  Configurable<float> cutQTG{"cutQTG", 0.03, "cutQTG"};
+  Configurable<float> cutAlphaGLow{"cutAlphaGLow", 0.4, "cutAlphaGLow"};
+  Configurable<float> cutAlphaGHigh{"cutAlphaGHigh", 0.8, "cutAlphaGHigh"};
+  Configurable<float> cutQTG2{"cutQTG2", 0.02, "cutQTG2"};
+  // K0S cuts
+  Configurable<float> cutQTK0SLow{"cutQTK0SLow", 0.1075, "cutQTK0SLow"};
+  Configurable<float> cutQTK0SHigh{"cutQTK0SHigh", 0.215, "cutQTK0SHigh"};
+  Configurable<float> cutAPK0SLow{"cutAPK0SLow", 0.199, "cutAPK0SLow"};
+  Configurable<float> cutAPK0SHigh{"cutAPK0SHigh", 0.8, "cutAPK0SHigh"};
+  // Lambda & A-Lambda cuts
+  Configurable<float> cutQTL{"cutQTL", 0.03, "cutQTL"};
+  Configurable<float> cutAlphaLLow{"cutAlphaLLow", 0.35, "cutAlphaLLow"};
+  Configurable<float> cutAlphaLHigh{"cutAlphaLHigh", 0.7, "cutAlphaLHigh"};
+  Configurable<float> cutAlphaALLow{"cutAlphaALow", -0.7, "cutAlphaALow"};
+  Configurable<float> cutAlphaALHigh{"cutAlphaAHigh", -0.35, "cutAlphaAHigh"};
+  Configurable<float> cutAPL1{"cutAPL1", 0.107, "cutAPL1"};
+  Configurable<float> cutAPL2{"cutAPL2", -0.69, "cutAPL2"};
+  Configurable<float> cutAPL3{"cutAPL3", 0.5, "cutAPL3"};
+
   enum { // Reconstructed V0
     kUndef = -1,
     kGamma = 0,
@@ -67,24 +100,22 @@ struct v0selector {
   {
     // float alpha = alphav0(ppos, pneg);
     // float qt = qtarmv0(ppos, pneg);
+    // // Gamma cuts
+    // const float cutAlphaG = 0.4;
+    // const float cutQTG = 0.03;
+    // const float cutAlphaG2[2] = {0.4, 0.8};
+    // const float cutQTG2 = 0.02;
 
-    // Gamma cuts
-    const float cutAlphaG = 0.4;
-    const float cutQTG = 0.03;
-    const float cutAlphaG2[2] = {0.4, 0.8};
-    const float cutQTG2 = 0.02;
+    // // K0S cuts
+    // const float cutQTK0S[2] = {0.1075, 0.215};
+    // const float cutAPK0S[2] = {0.199, 0.8}; // parameters for curved QT cut
 
-    // K0S cuts
-    const float cutQTK0S[2] = {0.1075, 0.215};
-    const float cutAPK0S[2] = {0.199, 0.8}; // parameters for curved QT cut
+    // // Lambda & A-Lambda cuts
+    // const float cutQTL = 0.03;
+    // const float cutAlphaL[2] = {0.35, 0.7};
+    // const float cutAlphaAL[2] = {-0.7, -0.35};
+    // const float cutAPL[3] = {0.107, -0.69, 0.5}; // parameters for curved QT cut
 
-    // Lambda & A-Lambda cuts
-    const float cutQTL = 0.03;
-    const float cutAlphaL[2] = {0.35, 0.7};
-    const float cutAlphaAL[2] = {-0.7, -0.35};
-    const float cutAPL[3] = {0.107, -0.69, 0.5}; // parameters for curved QT cut
-
-    // Check for Gamma candidates
     if (qt < cutQTG) {
       if ((TMath::Abs(alpha) < cutAlphaG)) {
         return kGamma;
@@ -92,26 +123,26 @@ struct v0selector {
     }
     if (qt < cutQTG2) {
       // additional region - should help high pT gammas
-      if ((TMath::Abs(alpha) > cutAlphaG2[0]) && (TMath::Abs(alpha) < cutAlphaG2[1])) {
+      if ((TMath::Abs(alpha) > cutAlphaGLow) && (TMath::Abs(alpha) < cutAlphaGHigh)) {
         return kGamma;
       }
     }
 
     // Check for K0S candidates
-    float q = cutAPK0S[0] * TMath::Sqrt(TMath::Abs(1 - alpha * alpha / (cutAPK0S[1] * cutAPK0S[1])));
-    if ((qt > cutQTK0S[0]) && (qt < cutQTK0S[1]) && (qt > q)) {
+    float q = cutAPK0SLow * TMath::Sqrt(TMath::Abs(1 - alpha * alpha / (cutAPK0SHigh * cutAPK0SHigh)));
+    if ((qt > cutQTK0SLow) && (qt < cutQTK0SHigh) && (qt > q)) {
       return kK0S;
     }
 
     // Check for Lambda candidates
-    q = cutAPL[0] * TMath::Sqrt(TMath::Abs(1 - ((alpha + cutAPL[1]) * (alpha + cutAPL[1])) / (cutAPL[2] * cutAPL[2])));
-    if ((alpha > cutAlphaL[0]) && (alpha < cutAlphaL[1]) && (qt > cutQTL) && (qt < q)) {
+    q = cutAPL1 * TMath::Sqrt(TMath::Abs(1 - ((alpha + cutAPL2) * (alpha + cutAPL2)) / (cutAPL3 * cutAPL3)));
+    if ((alpha > cutAlphaLLow) && (alpha < cutAlphaLHigh) && (qt > cutQTL) && (qt < q)) {
       return kLambda;
     }
 
     // Check for AntiLambda candidates
-    q = cutAPL[0] * TMath::Sqrt(TMath::Abs(1 - ((alpha - cutAPL[1]) * (alpha - cutAPL[1])) / (cutAPL[2] * cutAPL[2])));
-    if ((alpha > cutAlphaAL[0]) && (alpha < cutAlphaAL[1]) && (qt > cutQTL) && (qt < q)) {
+    q = cutAPL1 * TMath::Sqrt(TMath::Abs(1 - ((alpha - cutAPL2) * (alpha - cutAPL2)) / (cutAPL3 * cutAPL3)));
+    if ((alpha > cutAlphaALLow) && (alpha < cutAlphaALHigh) && (qt > cutQTL) && (qt < q)) {
       return kAntiLambda;
     }
 
@@ -130,15 +161,22 @@ struct v0selector {
   Configurable<int> mincrossedrows{"mincrossedrows", 70, "min crossed rows"};
   Configurable<float> maxchi2tpc{"maxchi2tpc", 4.0, "max chi2/NclsTPC"};
   Configurable<bool> fillhisto{"fillhisto", false, "flag to fill histograms"};
+  // cutNsigmaElTPC, cutNsigmaPiTPC, cutNsigmaPrTPC
+  Configurable<float> cutNsigmaElTPC{"cutNsigmaElTPC", 5.0, "cutNsigmaElTPC"};
+  Configurable<float> cutNsigmaPiTPC{"cutNsigmaPiTPC", 5.0, "cutNsigmaPiTPC"};
+  Configurable<float> cutNsigmaPrTPC{"cutNsigmaPrTPC", 5.0, "cutNsigmaPrTPC"};
 
   HistogramRegistry registry{"registry"};
-  void init(o2::framework::InitContext& context)
+  void init(o2::framework::InitContext&)
   {
     if (fillhisto) {
       registry.add("hV0Candidate", "hV0Candidate", HistType::kTH1F, {{2, 0.5f, 2.5f}});
       registry.add("hMassGamma", "hMassGamma", HistType::kTH2F, {{900, 0.0f, 90.0f}, {100, 0.0f, 0.1f}});
       registry.add("hGammaRxy", "hGammaRxy", HistType::kTH2F, {{1800, -90.0f, 90.0f}, {1800, -90.0f, 90.0f}});
       registry.add("hMassK0S", "hMassK0S", HistType::kTH2F, {{900, 0.0f, 90.0f}, {100, 0.45, 0.55}});
+      registry.add("hMassK0SPt", "hMassK0SPt", HistType::kTH2F, {{200, 0.0f, 20.0f}, {100, 0.45, 0.55}});
+      registry.add("hMassK0SEta", "hMassK0SEta", HistType::kTH2F, {{20, -1, 1}, {100, 0.45, 0.55}});
+      registry.add("hMassK0SPhi", "hMassK0SPhi", HistType::kTH2F, {{63, 0, 6.3}, {100, 0.45, 0.55}});
       registry.add("hMassLambda", "hMassLambda", HistType::kTH2F, {{900, 0.0f, 90.0f}, {100, 1.05, 1.15f}});
       registry.add("hMassAntiLambda", "hAntiMassLambda", HistType::kTH2F, {{900, 0.0f, 90.0f}, {100, 1.05, 1.15f}});
       registry.add("hV0Pt", "pT", HistType::kTH1F, {{100, 0.0f, 10}});
@@ -218,14 +256,14 @@ struct v0selector {
       //   continue;
       // }
 
-      auto const& collision = V0.collision_as<aod::Collisions>();
+      // auto const& collision = V0.collision_as<aod::Collisions>();
 
       //      if (V0.collisionId() != collision.globalIndex()) {
       //        continue;
       //      }
 
       float V0dca = V0.dcaV0daughters();
-      float V0CosinePA = V0.v0cosPA(collision.posX(), collision.posY(), collision.posZ());
+      float V0CosinePA = V0.v0cosPA();
       float V0radius = V0.v0radius();
 
       if (V0dca > dcav0dau) {
@@ -272,7 +310,7 @@ struct v0selector {
           registry.fill(HIST("hMassGamma"), V0radius, mGamma);
           registry.fill(HIST("hV0Psi"), psipair, mGamma);
         }
-        if (mGamma < v0max_mee && TMath::Abs(V0.posTrack_as<FullTracksExt>().tpcNSigmaEl()) < 5 && TMath::Abs(V0.negTrack_as<FullTracksExt>().tpcNSigmaEl()) < 5 && psipair < maxpsipair) {
+        if (mGamma < v0max_mee && TMath::Abs(V0.posTrack_as<FullTracksExt>().tpcNSigmaEl()) < cutNsigmaElTPC && TMath::Abs(V0.negTrack_as<FullTracksExt>().tpcNSigmaEl()) < cutNsigmaElTPC && TMath::Abs(psipair) < maxpsipair) {
           pidmap[V0.posTrackId()] |= (uint8_t(1) << kGamma);
           pidmap[V0.negTrackId()] |= (uint8_t(1) << kGamma);
           if (fillhisto) {
@@ -282,8 +320,11 @@ struct v0selector {
       } else if (v0id == kK0S) { // K0S-> pi pi
         if (fillhisto) {
           registry.fill(HIST("hMassK0S"), V0radius, mK0S);
+          registry.fill(HIST("hMassK0SPt"), V0.pt(), mK0S);
+          registry.fill(HIST("hMassK0SEta"), V0.eta(), mK0S);
+          registry.fill(HIST("hMassK0SPhi"), V0.phi(), mK0S);
         }
-        if ((0.48 < mK0S && mK0S < 0.51) && TMath::Abs(V0.posTrack_as<FullTracksExt>().tpcNSigmaPi()) < 5 && TMath::Abs(V0.negTrack_as<FullTracksExt>().tpcNSigmaPi()) < 5) {
+        if ((0.48 < mK0S && mK0S < 0.51) && TMath::Abs(V0.posTrack_as<FullTracksExt>().tpcNSigmaPi()) < cutNsigmaPiTPC && TMath::Abs(V0.negTrack_as<FullTracksExt>().tpcNSigmaPi()) < cutNsigmaPiTPC) {
           pidmap[V0.posTrackId()] |= (uint8_t(1) << kK0S);
           pidmap[V0.negTrackId()] |= (uint8_t(1) << kK0S);
         }
@@ -291,7 +332,7 @@ struct v0selector {
         if (fillhisto) {
           registry.fill(HIST("hMassLambda"), V0radius, mLambda);
         }
-        if (v0id == kLambda && (1.110 < mLambda && mLambda < 1.120) && TMath::Abs(V0.posTrack_as<FullTracksExt>().tpcNSigmaPr()) < 5 && TMath::Abs(V0.negTrack_as<FullTracksExt>().tpcNSigmaPi()) < 5) {
+        if (v0id == kLambda && (1.110 < mLambda && mLambda < 1.120) && TMath::Abs(V0.posTrack_as<FullTracksExt>().tpcNSigmaPr()) < cutNsigmaPrTPC && TMath::Abs(V0.negTrack_as<FullTracksExt>().tpcNSigmaPi()) < cutNsigmaPiTPC) {
           pidmap[V0.posTrackId()] |= (uint8_t(1) << kLambda);
           pidmap[V0.negTrackId()] |= (uint8_t(1) << kLambda);
         }
@@ -299,7 +340,7 @@ struct v0selector {
         if (fillhisto) {
           registry.fill(HIST("hMassAntiLambda"), V0radius, mAntiLambda);
         }
-        if ((1.110 < mAntiLambda && mAntiLambda < 1.120) && TMath::Abs(V0.posTrack_as<FullTracksExt>().tpcNSigmaPi()) < 5 && TMath::Abs(V0.negTrack_as<FullTracksExt>().tpcNSigmaPr()) < 5) {
+        if ((1.110 < mAntiLambda && mAntiLambda < 1.120) && TMath::Abs(V0.posTrack_as<FullTracksExt>().tpcNSigmaPi()) < cutNsigmaPiTPC && TMath::Abs(V0.negTrack_as<FullTracksExt>().tpcNSigmaPr()) < cutNsigmaPrTPC) {
           pidmap[V0.posTrackId()] |= (uint8_t(1) << kAntiLambda);
           pidmap[V0.negTrackId()] |= (uint8_t(1) << kAntiLambda);
         }
@@ -323,8 +364,12 @@ struct trackPIDQA {
   Configurable<float> dcamax{"dcamax", 1e+10, "dcamax"};
   Configurable<int> mincrossedrows{"mincrossedrows", 70, "min crossed rows"};
   Configurable<float> maxchi2tpc{"maxchi2tpc", 4.0, "max chi2/NclsTPC"};
+  Configurable<bool> fillDQHisto{"fillDQHisto", false, "flag to fill dq histograms"};
+  Configurable<std::string> fConfigAddTrackHistogram{"cfgAddTrackHistogram", "", "Comma separated list of dq histograms"};
 
   HistogramRegistry registry{"registry"};
+  OutputObj<THashList> fOutputList{"output"}; //! the histogram manager output list
+  HistogramManager* fHistMan;
   void init(o2::framework::InitContext& context)
   {
     bool enableBarrelHistos = context.mOptions.get<bool>("processQA");
@@ -359,6 +404,21 @@ struct trackPIDQA {
       registry.add("h2TOFnSigma_Pin_Pi", "TOF n#sigma_{#pi} vs. p_{in}", HistType::kTH2F, {{1000, 0.0, 10}, {200, -10, +10}});
       registry.add("h2TOFnSigma_Pin_Ka", "TOF n#sigma_{K} vs. p_{in}", HistType::kTH2F, {{1000, 0.0, 10}, {200, -10, +10}});
       registry.add("h2TOFnSigma_Pin_Pr", "TOF n#sigma_{p} vs. p_{in}", HistType::kTH2F, {{1000, 0.0, 10}, {200, -10, +10}});
+    }
+
+    if (fillDQHisto) {
+      TString histClasses = "";
+      VarManager::SetDefaultVarNames();
+      fHistMan = new HistogramManager("analysisHistos", "aa", VarManager::kNVars);
+      fHistMan->SetUseDefaultVariableNames(kTRUE);
+      fHistMan->SetDefaultVarNames(VarManager::fgVariableNames, VarManager::fgVariableUnits);
+      histClasses += "V0Track_all;";
+      histClasses += "V0Track_electron;";
+      histClasses += "V0Track_pion;";
+      histClasses += "V0Track_proton;";
+      DefineHistograms(histClasses);
+      VarManager::SetUseVars(fHistMan->GetUsedVars()); // provide the list of required variables so that VarManager knows what to fill
+      fOutputList.setObject(fHistMan->GetMainHistogramList());
     }
   }
 
@@ -463,10 +523,60 @@ struct trackPIDQA {
         registry.fill(HIST("h2TOFnSigma_Pin_Ka"), track.tpcInnerParam(), track.tofNSigmaKa());
       }
 
+      if (fillDQHisto) {
+        VarManager::FillTrack<gkTrackFillMap>(track);
+        fHistMan->FillHistClass("V0Track_all", VarManager::fgValues);
+        if (static_cast<bool>(track.pidbit() & (1 << v0selector::kGamma))) {
+          fHistMan->FillHistClass("V0Track_electron", VarManager::fgValues);
+        }
+        if (static_cast<bool>(track.pidbit() & (1 << v0selector::kK0S))) {
+          fHistMan->FillHistClass("V0Track_pion", VarManager::fgValues);
+        }
+        if (static_cast<bool>(track.pidbit() & (1 << v0selector::kLambda))) {
+          if (track.sign() > 0) {
+            fHistMan->FillHistClass("V0Track_proton", VarManager::fgValues);
+          } else {
+            fHistMan->FillHistClass("V0Track_pion", VarManager::fgValues);
+          }
+        }
+        if (static_cast<bool>(track.pidbit() & (1 << v0selector::kAntiLambda))) {
+          if (track.sign() > 0) {
+            fHistMan->FillHistClass("V0Track_pion", VarManager::fgValues);
+          } else {
+            fHistMan->FillHistClass("V0Track_proton", VarManager::fgValues);
+          }
+        }
+      }
+
     } // end of track loop
   }   // end of process
 
-  void processDummy(soa::Join<aod::Collisions, aod::EvSels>::iterator const& collision)
+  void DefineHistograms(TString histClasses)
+  {
+    std::unique_ptr<TObjArray> objArray(histClasses.Tokenize(";"));
+    for (Int_t iclass = 0; iclass < objArray->GetEntries(); ++iclass) {
+      TString classStr = objArray->At(iclass)->GetName();
+      fHistMan->AddHistClass(classStr.Data());
+
+      // fill the THn histograms
+      if (classStr.Contains("V0Track_electron")) {
+        o2::aod::dqhistograms::DefineHistograms(fHistMan, objArray->At(iclass)->GetName(), "track", "postcalib_electron");
+      }
+      if (classStr.Contains("V0Track_pion")) {
+        o2::aod::dqhistograms::DefineHistograms(fHistMan, objArray->At(iclass)->GetName(), "track", "postcalib_pion");
+      }
+      if (classStr.Contains("V0Track_proton")) {
+        o2::aod::dqhistograms::DefineHistograms(fHistMan, objArray->At(iclass)->GetName(), "track", "postcalib_proton");
+      }
+
+      TString histTrackName = fConfigAddTrackHistogram.value;
+      if (classStr.Contains("Track")) {
+        o2::aod::dqhistograms::DefineHistograms(fHistMan, objArray->At(iclass)->GetName(), "track", histTrackName);
+      }
+    }
+  }
+
+  void processDummy(soa::Join<aod::Collisions, aod::EvSels>::iterator const&)
   {
     // do nothing
   }

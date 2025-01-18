@@ -14,6 +14,9 @@
 //
 
 #include <utility>
+
+#include <TPDGCode.h>
+
 #include "Framework/AnalysisDataModel.h"
 #include "Framework/AnalysisTask.h"
 #include "Framework/runDataProcessing.h"
@@ -78,6 +81,8 @@ struct OnTheFlyTOFPID {
   Configurable<int> nBinsTrackDeltaLength{"nBinsTrackDeltaLength", 100, "number of bins in delta track length"};
   Configurable<int> nBinsNsigmaCorrectSpecies{"nBinsNsigmaCorrectSpecies", 200, "number of bins in Nsigma plot (correct speies)"};
   Configurable<int> nBinsNsigmaWrongSpecies{"nBinsNsigmaWrongSpecies", 200, "number of bins in Nsigma plot (wrong species)"};
+  Configurable<float> minNsigmaRange{"minNsigmaRange", -10, "lower limit for the nsigma axis"};
+  Configurable<float> maxNsigmaRange{"maxNsigmaRange", +10, "upper limit for the nsigma axis"};
   Configurable<int> nBinsTimeRes{"nBinsTimeRes", 400, "number of bins plots time resolution"};
   Configurable<int> nBinsRelativeEtaPt{"nBinsRelativeEtaPt", 400, "number of bins plots pt and eta relative errors"};
   Configurable<int> nBinsEta{"nBinsEta", 400, "number of bins plot relative eta error"};
@@ -102,7 +107,7 @@ struct OnTheFlyTOFPID {
   // for handling basic QA histograms if requested
   HistogramRegistry histos{"Histos", {}, OutputObjHandlingPolicy::AnalysisObject};
 
-  void init(o2::framework::InitContext& initContext)
+  void init(o2::framework::InitContext&)
   {
     pRandomNumberGenerator.SetSeed(0); // fully randomize
 
@@ -135,7 +140,7 @@ struct OnTheFlyTOFPID {
     }
 
     if (doQAplots) {
-      const AxisSpec axisMomentum{static_cast<int>(nBinsP), 0.0f, +4.0f, "#it{p} (GeV/#it{c})"};
+      const AxisSpec axisMomentum{static_cast<int>(nBinsP), 0.0f, +10.0f, "#it{p} (GeV/#it{c})"};
       const AxisSpec axisMomentumSmall{static_cast<int>(nBinsP), 0.0f, +1.0f, "#it{p} (GeV/#it{c})"};
       const AxisSpec axisVelocity{static_cast<int>(nBinsBeta), 0.0f, +1.1f, "Measured #beta"};
       const AxisSpec axisTrackLengthInner{static_cast<int>(nBinsTrackLengthInner), 0.0f, 60.0f, "Track length (cm)"};
@@ -179,11 +184,11 @@ struct OnTheFlyTOFPID {
           std::string name_title_inner = "h2dInnerNsigmaTrue" + particle_names2[i_true] + "Vs" + particle_names2[i_hyp] + "Hypothesis";
           std::string name_title_outer = "h2dOuterNsigmaTrue" + particle_names2[i_true] + "Vs" + particle_names2[i_hyp] + "Hypothesis";
           if (i_true == i_hyp) {
-            const AxisSpec axisNsigmaCorrect{static_cast<int>(nBinsNsigmaCorrectSpecies), -10.0f, +10.0f, "N#sigma - True " + particle_names1[i_true] + " vs " + particle_names1[i_hyp] + " hypothesis"};
+            const AxisSpec axisNsigmaCorrect{static_cast<int>(nBinsNsigmaCorrectSpecies), minNsigmaRange, maxNsigmaRange, "N#sigma - True " + particle_names1[i_true] + " vs " + particle_names1[i_hyp] + " hypothesis"};
             histos.add(name_title_inner.c_str(), name_title_inner.c_str(), kTH2F, {axisMomentum, axisNsigmaCorrect});
             histos.add(name_title_outer.c_str(), name_title_outer.c_str(), kTH2F, {axisMomentum, axisNsigmaCorrect});
           } else {
-            const AxisSpec axisNsigmaWrong{static_cast<int>(nBinsNsigmaWrongSpecies), -10.0f, +10.0f, "N#sigma -  True " + particle_names1[i_true] + " vs " + particle_names1[i_hyp] + " hypothesis"};
+            const AxisSpec axisNsigmaWrong{static_cast<int>(nBinsNsigmaWrongSpecies), minNsigmaRange, maxNsigmaRange, "N#sigma -  True " + particle_names1[i_true] + " vs " + particle_names1[i_hyp] + " hypothesis"};
             histos.add(name_title_inner.c_str(), name_title_inner.c_str(), kTH2F, {axisMomentum, axisNsigmaWrong});
             histos.add(name_title_outer.c_str(), name_title_outer.c_str(), kTH2F, {axisMomentum, axisNsigmaWrong});
           }
@@ -273,10 +278,10 @@ struct OnTheFlyTOFPID {
 
       if (scalarProduct1 > scalarProduct2) {
         modulus = std::hypot(point1[0] - trcCircle.xC, point1[1] - trcCircle.yC) * std::hypot(startPoint[0] - trcCircle.xC, startPoint[1] - trcCircle.yC);
-        cosAngle = (point1[0] - trcCircle.xC) * (startPoint[0] - trcCircle.xC) + (point1[1] - trcCircle.yC) * (startPoint[0] - trcCircle.yC);
+        cosAngle = (point1[0] - trcCircle.xC) * (startPoint[0] - trcCircle.xC) + (point1[1] - trcCircle.yC) * (startPoint[1] - trcCircle.yC);
       } else {
         modulus = std::hypot(point2[0] - trcCircle.xC, point2[1] - trcCircle.yC) * std::hypot(startPoint[0] - trcCircle.xC, startPoint[1] - trcCircle.yC);
-        cosAngle = (point2[0] - trcCircle.xC) * (startPoint[0] - trcCircle.xC) + (point2[1] - trcCircle.yC) * (startPoint[0] - trcCircle.yC);
+        cosAngle = (point2[0] - trcCircle.xC) * (startPoint[0] - trcCircle.xC) + (point2[1] - trcCircle.yC) * (startPoint[1] - trcCircle.yC);
       }
       cosAngle /= modulus;
       length = trcCircle.rC * TMath::ACos(cosAngle);

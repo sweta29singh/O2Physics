@@ -15,6 +15,9 @@
 
 #include <utility>
 #include <cmath>
+
+#include <TPDGCode.h>
+
 #include "Framework/AnalysisDataModel.h"
 #include "Framework/AnalysisTask.h"
 #include "Framework/runDataProcessing.h"
@@ -205,7 +208,7 @@ struct OnTheFlyRichPid {
     }
   }
 
-  void init(o2::framework::InitContext& initContext)
+  void init(o2::framework::InitContext&)
   {
     pRandomNumberGenerator.SetSeed(0); // fully randomize
 

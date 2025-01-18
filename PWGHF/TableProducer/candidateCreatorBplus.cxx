@@ -18,6 +18,11 @@
 /// \author Deepa Thomas <deepa.thomas@cern.ch>, UT Austin
 /// \author Antonio Palasciano <antonio.palasciano@cern.ch>, Università degli Studi di Bari & INFN, Sezione di Bari
 
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "CommonConstants/PhysicsConstants.h"
 #include "DCAFitter/DCAFitterN.h"
 #include "Framework/AnalysisTask.h"
 #include "Framework/runDataProcessing.h"
@@ -27,22 +32,24 @@
 #include "Common/Core/trackUtilities.h"
 #include "Common/DataModel/CollisionAssociationTables.h"
 
+#include "PWGHF/Core/HfHelper.h"
 #include "PWGHF/DataModel/CandidateReconstructionTables.h"
 #include "PWGHF/DataModel/CandidateSelectionTables.h"
 #include "PWGHF/Utils/utilsBfieldCCDB.h"
+#include "PWGHF/Utils/utilsTrkCandHf.h"
 
 using namespace o2;
+using namespace o2::analysis;
+using namespace o2::hf_trkcandsel;
+using namespace o2::aod;
+using namespace o2::constants::physics;
 using namespace o2::framework;
 using namespace o2::framework::expressions;
-using namespace o2::aod;
-using namespace o2::aod::hf_cand;
-using namespace o2::aod::hf_cand_2prong;
-using namespace o2::aod::hf_cand_3prong;
-using namespace o2::aod::hf_cand_bplus;
 
 /// Reconstruction of B± → D0bar(D0) π± → (K± π∓) π±
 struct HfCandidateCreatorBplus {
-  Produces<aod::HfCandBplusBase> rowCandidateBase;
+  Produces<aod::HfCandBplusBase> rowCandidateBase;     // table defined in CandidateReconstructionTables.h
+  Produces<aod::HfCandBplusProngs> rowCandidateProngs; // table defined in CandidateReconstructionTables.h
 
   // vertexing parameters
   // Configurable<double> bz{"bz", 5., "magnetic field"};
@@ -70,16 +77,20 @@ struct HfCandidateCreatorBplus {
   Configurable<std::string> ccdbPathGrp{"ccdbPathGrp", "GLO/GRP/GRP", "Path of the grp file (Run 2)"};
   Configurable<std::string> ccdbPathGrpMag{"ccdbPathGrpMag", "GLO/Config/GRPMagField", "CCDB path of the GRPMagField object (Run 3)"};
 
+  HfHelper hfHelper;
   Service<o2::ccdb::BasicCCDBManager> ccdb;
   o2::base::MatLayerCylSet* lut;
   o2::base::Propagator::MatCorrType matCorr = o2::base::Propagator::MatCorrType::USEMatCorrLUT;
   int runNumber;
 
-  double massPi = RecoDecay::getMassPDG(kPiPlus);
-  double massD0 = RecoDecay::getMassPDG(pdg::Code::kD0);
-  double massBplus = RecoDecay::getMassPDG(pdg::Code::kBPlus);
-  double massD0Pi = 0.;
-  double bz = 0.;
+  double invMass2D0PiMin{0.};
+  double invMass2D0PiMax{0.};
+  double bz{0.};
+
+  // Fitter for B vertex
+  o2::vertexing::DCAFitterN<2> dfB;
+  // Fitter to redo D-vertex to get extrapolated daughter tracks
+  o2::vertexing::DCAFitterN<2> df;
 
   using TracksWithSel = soa::Join<aod::TracksWCovDca, aod::TrackSelection>;
   using CandsDFiltered = soa::Filtered<soa::Join<aod::HfCand2Prong, aod::HfSelD0>>;
@@ -94,13 +105,43 @@ struct HfCandidateCreatorBplus {
   OutputObj<TH1F> hEtaPi{TH1F("hEtaPi", "Pion track;#it{#eta};entries", 400, -2., 2.)};
   OutputObj<TH1F> hMassBplusToD0Pi{TH1F("hMassBplusToD0Pi", "2-prong candidates;inv. mass (B^{+} #rightarrow #bar{D^{0}}#pi^{+}) (GeV/#it{c}^{2});entries", 500, 3., 8.)};
 
+  std::shared_ptr<TH1> hCandidatesD, hCandidatesB;
+  HistogramRegistry registry{"registry"};
+
   void init(InitContext const&)
   {
+    // invariant-mass window cut
+    invMass2D0PiMin = (MassBPlus - invMassWindowBplus) * (MassBPlus - invMassWindowBplus);
+    invMass2D0PiMax = (MassBPlus + invMassWindowBplus) * (MassBPlus + invMassWindowBplus);
+
+    // Initialise fitter for B vertex
+    dfB.setPropagateToPCA(propagateToPCA);
+    dfB.setMaxR(maxR);
+    dfB.setMinParamChange(minParamChange);
+    dfB.setMinRelChi2Change(minRelChi2Change);
+    dfB.setUseAbsDCA(true);
+    dfB.setWeightedFinalPCA(useWeightedFinalPCA);
+
+    // Initial fitter to redo D-vertex to get extrapolated daughter tracks
+    df.setPropagateToPCA(propagateToPCA);
+    df.setMaxR(maxR);
+    df.setMinParamChange(minParamChange);
+    df.setMinRelChi2Change(minRelChi2Change);
+    df.setUseAbsDCA(useAbsDCA);
+    df.setWeightedFinalPCA(useWeightedFinalPCA);
+
+    // Configure CCDB access
     ccdb->setURL(ccdbUrl);
     ccdb->setCaching(true);
     ccdb->setLocalObjectValidityChecking();
     lut = o2::base::MatLayerCylSet::rectifyPtrFromFile(ccdb->get<o2::base::MatLayerCylSet>(ccdbPathLut));
     runNumber = 0;
+
+    /// candidate monitoring
+    hCandidatesD = registry.add<TH1>("hCandidatesD", "D candidate counter", {HistType::kTH1D, {axisCands}});
+    hCandidatesB = registry.add<TH1>("hCandidatesB", "B candidate counter", {HistType::kTH1D, {axisCands}});
+    setLabelHistoCands(hCandidatesD);
+    setLabelHistoCands(hCandidatesB);
   }
 
   /// Single-track cuts for pions on dcaXY
@@ -130,34 +171,8 @@ struct HfCandidateCreatorBplus {
                aod::BCsWithTimestamps const&)
   {
 
-    // Initialise fitter for B vertex
-    o2::vertexing::DCAFitterN<2> dfB;
-    dfB.setPropagateToPCA(propagateToPCA);
-    dfB.setMaxR(maxR);
-    dfB.setMinParamChange(minParamChange);
-    dfB.setMinRelChi2Change(minRelChi2Change);
-    dfB.setUseAbsDCA(true);
-    dfB.setWeightedFinalPCA(useWeightedFinalPCA);
-
-    // Initial fitter to redo D-vertex to get extrapolated daughter tracks
-    o2::vertexing::DCAFitterN<2> df;
-    df.setPropagateToPCA(propagateToPCA);
-    df.setMaxR(maxR);
-    df.setMinParamChange(minParamChange);
-    df.setMinRelChi2Change(minRelChi2Change);
-    df.setUseAbsDCA(useAbsDCA);
-    df.setWeightedFinalPCA(useWeightedFinalPCA);
-
-    static int nCol = 0;
-
     for (const auto& collision : collisions) {
       auto primaryVertex = getPrimaryVertex(collision);
-
-      if (nCol % 10000 == 0) {
-        LOG(debug) << nCol << " collisions parsed";
-      }
-      nCol++;
-
       /// Set the magnetic field from ccdb.
       /// The static instance of the propagator was already modified in the HFTrackIndexSkimCreator,
       /// but this is not true when running on Run2 data/MC already converted into AO2Ds.
@@ -180,11 +195,11 @@ struct HfCandidateCreatorBplus {
         if (!TESTBIT(candD0.hfflag(), aod::hf_cand_2prong::DecayType::D0ToPiK)) {
           continue;
         }
-        if (yCandMax >= 0. && std::abs(yD0(candD0)) > yCandMax) {
+        if (yCandMax >= 0. && std::abs(hfHelper.yD0(candD0)) > yCandMax) {
           continue;
         }
 
-        hRapidityD0->Fill(yD0(candD0));
+        hRapidityD0->Fill(hfHelper.yD0(candD0));
 
         // track0 <-> pi, track1 <-> K
         auto prong0 = candD0.prong0_as<TracksWithSel>();
@@ -205,9 +220,17 @@ struct HfCandidateCreatorBplus {
         }
 
         // reconstruct D0 secondary vertex
-        if (df.process(trackParCovProng0, trackParCovProng1) == 0) {
+        hCandidatesD->Fill(SVFitting::BeforeFit);
+        try {
+          if (df.process(trackParCovProng0, trackParCovProng1) == 0) {
+            continue;
+          }
+        } catch (const std::runtime_error& error) {
+          LOG(info) << "Run time error found: " << error.what() << ". DCAFitterN for D cannot work, skipping the candidate.";
+          hCandidatesD->Fill(SVFitting::Fail);
           continue;
         }
+        hCandidatesD->Fill(SVFitting::FitOk);
 
         const auto& vertexD0 = df.getPCACandidatePos();
         trackParCovProng0.propagateTo(vertexD0[0], bz);
@@ -261,12 +284,19 @@ struct HfCandidateCreatorBplus {
           auto trackParCovPi = getTrackParCov(trackPion);
           std::array<float, 3> pVecD0 = {0., 0., 0.};
           std::array<float, 3> pVecBach = {0., 0., 0.};
-          std::array<float, 3> pVecBCand = {0., 0., 0.};
 
           // find the DCA between the D0 and the bachelor track, for B+
-          if (dfB.process(trackD0, trackParCovPi) == 0) {
+          hCandidatesB->Fill(SVFitting::BeforeFit);
+          try {
+            if (dfB.process(trackD0, trackParCovPi) == 0) {
+              continue;
+            }
+          } catch (const std::runtime_error& error) {
+            LOG(info) << "Run time error found: " << error.what() << ". DCAFitterN for B cannot work, skipping the candidate.";
+            hCandidatesB->Fill(SVFitting::Fail);
             continue;
           }
+          hCandidatesB->Fill(SVFitting::FitOk);
 
           dfB.propagateTracksToVertex();        // propagate the bachelor and D0 to the B+ vertex
           trackD0.getPxPyPzGlo(pVecD0);         // momentum of D0 at the B+ vertex
@@ -276,8 +306,6 @@ struct HfCandidateCreatorBplus {
           auto chi2PCA = dfB.getChi2AtPCACandidate();
           auto covMatrixPCA = dfB.calcPCACovMatrixFlat();
           hCovSVXX->Fill(covMatrixPCA[0]); // FIXME: Calculation of errorDecayLength(XY) gives wrong values without this line.
-
-          pVecBCand = RecoDecay::pVec(pVecD0, pVecBach);
 
           // get track impact parameters
           // This modifies track momenta!
@@ -294,14 +322,12 @@ struct HfCandidateCreatorBplus {
           auto errorDecayLength = std::sqrt(getRotatedCovMatrixXX(covMatrixPV, phi, theta) + getRotatedCovMatrixXX(covMatrixPCA, phi, theta));
           auto errorDecayLengthXY = std::sqrt(getRotatedCovMatrixXX(covMatrixPV, phi, 0.) + getRotatedCovMatrixXX(covMatrixPCA, phi, 0.));
 
-          int hfFlag = BIT(hf_cand_bplus::DecayType::BplusToD0Pi);
-
-          // calculate invariant mass and fill the Invariant Mass control plot
-          massD0Pi = RecoDecay::m(std::array{pVecD0, pVecBach}, std::array{massD0, massPi});
-          if (std::abs(massD0Pi - massBplus) > invMassWindowBplus) {
+          // compute invariant mass square and apply selection
+          auto invMass2D0Pi = RecoDecay::m2(std::array{pVecD0, pVecBach}, std::array{MassD0, MassPiPlus});
+          if ((invMass2D0Pi < invMass2D0PiMin) || (invMass2D0Pi > invMass2D0PiMax)) {
             continue;
           }
-          hMassBplusToD0Pi->Fill(massD0Pi);
+          hMassBplusToD0Pi->Fill(std::sqrt(invMass2D0Pi));
 
           // fill candidate table rows
           rowCandidateBase(collision.globalIndex(),
@@ -312,14 +338,14 @@ struct HfCandidateCreatorBplus {
                            pVecD0[0], pVecD0[1], pVecD0[2],
                            pVecBach[0], pVecBach[1], pVecBach[2],
                            impactParameter0.getY(), impactParameter1.getY(),
-                           std::sqrt(impactParameter0.getSigmaY2()), std::sqrt(impactParameter1.getSigmaY2()),
-                           candD0.globalIndex(), trackPion.globalIndex(), // index D0 and bachelor
-                           hfFlag);
-        } // track loop
-      }   // D0 cand loop
-    }     // collision
-  }       // process
-};        // struct
+                           std::sqrt(impactParameter0.getSigmaY2()), std::sqrt(impactParameter1.getSigmaY2()));
+
+          rowCandidateProngs(candD0.globalIndex(), trackPion.globalIndex()); // index D0 and bachelor
+        }                                                                    // track loop
+      }                                                                      // D0 cand loop
+    }                                                                        // collision
+  }                                                                          // process
+};                                                                           // struct
 
 /// Extends the base table with expression columns and performs MC matching
 struct HfCandidateCreatorBplusExpressions {
@@ -329,31 +355,31 @@ struct HfCandidateCreatorBplusExpressions {
 
   void init(InitContext const&) {}
 
-  void processMc(aod::HfCand2Prong const& dzero,
-                 aod::TracksWMc const& tracks,
-                 aod::McParticles const& mcParticles)
+  void processMc(aod::HfCand2Prong const&,
+                 aod::TracksWMc const&,
+                 aod::McParticles const& mcParticles,
+                 aod::HfCandBplusProngs const& candsBplus)
   {
-    rowCandidateBPlus->bindExternalIndices(&tracks);
-    rowCandidateBPlus->bindExternalIndices(&dzero);
 
     int indexRec = -1, indexRecD0 = -1;
     int8_t signB = 0, signD0 = 0;
     int8_t flag = 0;
     int8_t origin = 0;
-    int kD0pdg = pdg::Code::kD0;
+    int kD0pdg = Pdg::kD0;
 
     // Match reconstructed candidates.
     // Spawned table can be used directly
-    for (const auto& candidate : *rowCandidateBPlus) {
+    for (const auto& candidate : candsBplus) {
+
       flag = 0;
       origin = 0;
-      auto candDaughterD0 = candidate.prong0_as<aod::HfCand2Prong>();
+      auto candDaughterD0 = candidate.prong0();
       auto arrayDaughtersD0 = std::array{candDaughterD0.prong0_as<aod::TracksWMc>(), candDaughterD0.prong1_as<aod::TracksWMc>()};
       auto arrayDaughters = std::array{candidate.prong1_as<aod::TracksWMc>(), candDaughterD0.prong0_as<aod::TracksWMc>(), candDaughterD0.prong1_as<aod::TracksWMc>()};
 
       // B± → D0bar(D0) π± → (K± π∓) π±
-      indexRec = RecoDecay::getMatchedMCRec(mcParticles, arrayDaughters, pdg::Code::kBPlus, std::array{+kPiPlus, +kKPlus, -kPiPlus}, true, &signB, 2);
-      indexRecD0 = RecoDecay::getMatchedMCRec(mcParticles, arrayDaughtersD0, -pdg::Code::kD0, std::array{+kKPlus, -kPiPlus}, true, &signD0, 1);
+      indexRec = RecoDecay::getMatchedMCRec(mcParticles, arrayDaughters, Pdg::kBPlus, std::array{+kPiPlus, +kKPlus, -kPiPlus}, true, &signB, 2);
+      indexRecD0 = RecoDecay::getMatchedMCRec(mcParticles, arrayDaughtersD0, -Pdg::kD0, std::array{+kKPlus, -kPiPlus}, true, &signD0, 1);
 
       if (indexRecD0 > -1 && indexRec > -1) {
         flag = signB * (1 << hf_cand_bplus::DecayType::BplusToD0Pi);
@@ -371,12 +397,12 @@ struct HfCandidateCreatorBplusExpressions {
 
       // B± → D0bar(D0) π± → (K± π∓) π±
       std::vector<int> arrayDaughterB;
-      if (RecoDecay::isMatchedMCGen(mcParticles, particle, pdg::Code::kBPlus, std::array{-kD0pdg, +kPiPlus}, true, &signB, 1, &arrayDaughterB)) {
+      if (RecoDecay::isMatchedMCGen(mcParticles, particle, Pdg::kBPlus, std::array{-kD0pdg, +kPiPlus}, true, &signB, 1, &arrayDaughterB)) {
         // D0(bar) → π± K∓
         for (auto iD : arrayDaughterB) {
           auto candDaughterMC = mcParticles.rawIteratorAt(iD);
           if (std::abs(candDaughterMC.pdgCode()) == kD0pdg) {
-            indexGenD0 = RecoDecay::isMatchedMCGen(mcParticles, candDaughterMC, pdg::Code::kD0, std::array{-kKPlus, +kPiPlus}, true, &signD0, 1);
+            indexGenD0 = RecoDecay::isMatchedMCGen(mcParticles, candDaughterMC, Pdg::kD0, std::array{-kKPlus, +kPiPlus}, true, &signD0, 1);
           }
         }
         if (indexGenD0 > -1) {

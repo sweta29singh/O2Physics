@@ -20,13 +20,13 @@
 #include "Framework/AnalysisTask.h"
 #include "Framework/runDataProcessing.h"
 
+#include "PWGHF/Core/HfHelper.h"
 #include "PWGHF/DataModel/CandidateReconstructionTables.h"
 #include "PWGHF/DataModel/CandidateSelectionTables.h"
 
 using namespace o2;
 using namespace o2::aod;
 using namespace o2::framework;
-using namespace o2::aod::hf_cand_x;
 
 namespace o2::aod
 {
@@ -144,6 +144,8 @@ struct HfTreeCreatorXToJpsiPiPi {
   Produces<o2::aod::HfCandXFullEvs> rowCandidateFullEvents;
   Produces<o2::aod::HfCandXFullPs> rowCandidateFullParticles;
 
+  HfHelper hfHelper;
+
   using TracksWPid = soa::Join<aod::Tracks, aod::pidTOFFullPi, aod::pidTOFFullKa, aod::pidTOFFullPr>;
 
   void init(InitContext const&)
@@ -151,10 +153,10 @@ struct HfTreeCreatorXToJpsiPiPi {
   }
 
   void process(aod::Collisions const& collisions,
-               aod::McCollisions const& mcCollisions,
+               aod::McCollisions const&,
                soa::Join<aod::HfCandX, aod::HfCandXMcRec, aod::HfSelXToJpsiPiPi> const& candidates,
                soa::Join<aod::McParticles, aod::HfCandXMcGen> const& particles,
-               TracksWPid const& tracks)
+               TracksWPid const&)
   {
 
     // Filling event properties
@@ -171,13 +173,13 @@ struct HfTreeCreatorXToJpsiPiPi {
     }
 
     // Filling candidate properties
-    int indexCand = 0;
+    // int indexCand = 0;
     rowCandidateFull.reserve(candidates.size());
     for (const auto& candidate : candidates) {
       if (!candidate.isSelXToJpsiToMuMuPiPi()) {
         continue;
       }
-      indexCand++;
+      // indexCand++;
       auto fillTable = [&](int CandFlag,
                            int FunctionSelection,
                            float FunctionInvMass,
@@ -234,7 +236,7 @@ struct HfTreeCreatorXToJpsiPiPi {
         }
       };
 
-      fillTable(0, candidate.isSelXToJpsiToMuMuPiPi(), invMassXToJpsiPiPi(candidate), ctX(candidate), yX(candidate), qX(candidate), dRX(candidate, 1), dRX(candidate, 2), balancePtPionsX(candidate));
+      fillTable(0, candidate.isSelXToJpsiToMuMuPiPi(), hfHelper.invMassXToJpsiPiPi(candidate), hfHelper.ctX(candidate), hfHelper.yX(candidate), hfHelper.qX(candidate), hfHelper.dRX(candidate, 1), hfHelper.dRX(candidate, 2), hfHelper.balancePtPionsX(candidate));
     }
 
     // Filling particle properties
@@ -247,7 +249,7 @@ struct HfTreeCreatorXToJpsiPiPi {
           particle.pt(),
           particle.eta(),
           particle.phi(),
-          RecoDecay::y(std::array{particle.px(), particle.py(), particle.pz()}, massX),
+          RecoDecay::y(particle.pVector(), massX),
           particle.flagMcMatchGen(),
           particle.originMcGen());
       }
