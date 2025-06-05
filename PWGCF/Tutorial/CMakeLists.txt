@@ -37,4 +37,9 @@ o2physics_add_dpl_workflow(cf-tutorial-4
 o2physics_add_dpl_workflow(cf-tutorial-5
                     SOURCES CFTutorialTask5.cxx
                     PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::PWGCFCore
+                    COMPONENT_NAME Analysisi)
+
+o2physics_add_dpl_workflow(ident-meanpt-fluct
+                    SOURCES IdentifiedMeanPtFluctuations.cxx
+                    PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::PWGCFCore
                     COMPONENT_NAME Analysis)
