@@ -13,6 +13,11 @@
 /// \brief Analysis task to study Mean pT Fluctuations using two particle correlator using Cumulant Method
 /// \author Sweta Singh (sweta.singh@cern.ch)
 
+#include <vector>
+#include <fstream>
+#include <string>
+#include <sstream>
+
 #include "Framework/AnalysisTask.h"
 #include "Framework/runDataProcessing.h"
 #include "Common/DataModel/EventSelection.h"
@@ -35,13 +40,8 @@
 #include "Common/CCDB/TriggerAliases.h"
 #include "CCDB/BasicCCDBManager.h"
 #include "Framework/O2DatabasePDGPlugin.h"
-// #include "Framework/Constants.h"
-#include <fstream>
-#include <string>
-#include <sstream>
-#include <vector>
-
 #include "CommonConstants/PhysicsConstants.h"
+
 double massPi = o2::constants::physics::MassPionCharged;
 double massKa = o2::constants::physics::MassKaonCharged;
 double massPr = o2::constants::physics::MassProton;
@@ -1163,7 +1163,6 @@ struct EventMeanPtId {
       }
       nch1++;
       histos.fill(HIST("hnch1"), nch1);
-      //    if (!(pdgcode == 211 || pdgcode == 321 || pdgcode == 2212 || pdgcode == -211 || pdgcode == -321 || pdgcode == -2212 || pdgcode == 11 || pdgcode == 13))  continue;
       nch2++;
       histos.fill(HIST("hnch2"), nch2);
       nch3++;
