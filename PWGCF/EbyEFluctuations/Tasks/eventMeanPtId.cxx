@@ -199,9 +199,6 @@ struct EventMeanPtId {
     histos.add("Data/hnchTrue", ";hnchTrue", kTH1D, {nchAxis});
     histos.add("Data/hnchTrue_pt", ";hnchTrue_pt", kTH1D, {nchAxis});
 
-    histos.add("Data/hVar1x_old", "hVar1x_old", kTH2D, {subAxis, nchAxis});
-    histos.add("Data/hVar2x_old", "hVar2x_old", kTH2D, {subAxis, nchAxis});
-    histos.add("Data/hVarx_old", "hVarx_old", kTH2D, {subAxis, nchAxis});
     histos.add("Data/hVar1x", "hVar1x", kTH2D, {subAxis, nchAxis});
     histos.add("Data/hVar2x", "hVar2x", kTH2D, {subAxis, nchAxis});
     histos.add("Data/hVarx", "hVarx", kTH2D, {subAxis, nchAxis});
@@ -607,7 +604,7 @@ struct EventMeanPtId {
     double nch = 0., nchPi = 0., nchKa = 0., nchPr = 0., nchAll = 0., nchAllBfCut = 0., nchEta = 0., nchPt = 0.;
     double q1 = 0., q2 = 0., q1Old = 0., q2Old = 0.;
     double q1Pi = 0., q2Pi = 0., q1Ka = 0., q2Ka = 0., q1Pr = 0., q2Pr = 0.;
-    double var1 = 0., var2 = 0., twoParAllCharge = 0., var1Old = 0., var2Old = 0.;
+    double var1 = 0., var2 = 0., twoParAllCharge = 0.;
     double var1Pi = 0., var2Pi = 0.;
     double var1Ka = 0., var2Ka = 0.;
     double var1Pr = 0., var2Pr = 0.;
@@ -756,10 +753,6 @@ struct EventMeanPtId {
     } // Track loop ends!
     histos.fill(HIST("Data/hcent_nacc"), cent, nchAll);
 
-    if (nch >= cTwoPtlCut2) {
-      var1Old = (q1Old * q1Old - q2Old) / (nch * (nch - 1));
-      var2Old = (q1Old / nch);
-    }
     if (nchAll < cTwoPtlCut2)
       return;
     var1 = (q1 * q1 - q2) / (nchAll * (nchAll - 1));
@@ -805,10 +798,6 @@ struct EventMeanPtId {
     histos.fill(HIST("Data/hVar2meanptp"), cent, var2Pr);
 
     //-----------------------nch-------------------------------------
-    histos.fill(HIST("Data/hVar1x_old"), sample, nchAll, var1Old);
-    histos.fill(HIST("Data/hVar2x_old"), sample, nchAll, var2Old);
-    histos.fill(HIST("Data/hVarx_old"), sample, nchAll);
-
     histos.fill(HIST("Data/hVar1x"), sample, nchAll, var1);
     histos.fill(HIST("Data/hVar2x"), sample, nchAll, var2);
     histos.fill(HIST("Data/hVarx"), sample, nchAll);
@@ -876,7 +865,7 @@ struct EventMeanPtId {
     double nch = 0., nchPi = 0., nchKa = 0., nchPr = 0., nchAll = 0., nchAllBfCut = 0., nchEta = 0., nchPt = 0.;
     double q1 = 0., q2 = 0., q1Old = 0., q2Old = 0.;
     double q1Pi = 0., q2Pi = 0., q1Ka = 0., q2Ka = 0., q1Pr = 0., q2Pr = 0.;
-    double var1 = 0., var2 = 0., twoParAllCharge = 0., var1Old = 0., var2Old = 0.;
+    double var1 = 0., var2 = 0., twoParAllCharge = 0.;
     double var1Pi = 0., var2Pi = 0., var1Ka = 0., var2Ka = 0., var1Pr = 0., var2Pr = 0.;
 
     int sample = histos.get<TH1>(HIST("Rec/hZvtx_after_sel8"))->GetEntries();
@@ -1075,10 +1064,6 @@ struct EventMeanPtId {
     } // loop over tracks
     histos.fill(HIST("Rec/hcent_nacc"), cent, nchAll);
 
-    if (nch >= cTwoPtlCut2) {
-      var1Old = (q1Old * q1Old - q2Old) / (nch * (nch - 1));
-      var2Old = (q1Old / nch);
-    }
     if (nchAll < cTwoPtlCut2)
       return;
     var1 = (q1 * q1 - q2) / (nchAll * (nchAll - 1));
