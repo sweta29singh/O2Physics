@@ -9,7 +9,7 @@
 # granted to it by virtue of its status as an Intergovernmental Organization
 # or submit itself to any jurisdiction.
 
-o2physics_add_dpl_workflow(meanpt-fluctuations
+o2physics_add_dpl_workflow(meanptFluctuations
                     SOURCES MeanptFluctuations.cxx
                     PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::PWGCFCore
                     COMPONENT_NAME Analysis)
@@ -19,7 +19,7 @@ o2physics_add_dpl_workflow(mean-pt-fluc-id
                     PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::PWGCFCore
                     COMPONENT_NAME Analysis)
 
-o2physics_add_dpl_workflow(netproton-cumulants
+o2physics_add_dpl_workflow(netprotonCumulants
                     SOURCES NetProtonCumulants.cxx
                     PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::PWGCFCore
                     COMPONENT_NAME Analysis)
@@ -39,17 +39,17 @@ o2physics_add_dpl_workflow(event-mean-pt-id
                     PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::PWGCFCore
                     COMPONENT_NAME Analysis)
 
-o2physics_add_dpl_workflow(robust-fluctuation-observables
+o2physics_add_dpl_workflow(robustFluctuationObservables
                     SOURCES RobustFluctuationObservables.cxx
                     PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::PWGCFCore
                     COMPONENT_NAME Analysis)
 
-o2physics_add_dpl_workflow(factorial-moments
+o2physics_add_dpl_workflow(factorialMoments
                     SOURCES FactorialMomentsTask.cxx
                     PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::PWGCFCore
                     COMPONENT_NAME Analysis)
 
-o2physics_add_dpl_workflow(v0pt-pp-task
+o2physics_add_dpl_workflow(v0ptPpTask
                     SOURCES Diff_pT_fluct_PID.cxx
                     PUBLIC_LINK_LIBRARIES O2::Framework O2Physics::AnalysisCore O2Physics::PWGCFCore
                     COMPONENT_NAME Analysis)
