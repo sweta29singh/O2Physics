@@ -81,7 +81,22 @@ struct EventMeanPtId {
   Service<o2::ccdb::BasicCCDBManager> ccdb;
   Service<o2::framework::O2DatabasePDG> pdg;
 
+  Configurable<int64_t> ccdbNoLaterThan{"ccdbNoLaterThan", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count(), "latest acceptable timestamp of creation for the object"};
+  Configurable<std::string> cfgUrlCCDB{"cfgUrlCCDB", "http://alice-ccdb.cern.ch", "url of ccdb"};
+  Configurable<std::string> cfgPathCCDB{"cfgPathCCDB", "Users/s/swsingh/My/Object/eff_Pb", "Path for ccdb-object"};
+  Configurable<bool> cfgLoadEff{"cfgLoadEff", true, "Load efficiency"};
+
   HistogramRegistry histos{"Histos", {}, OutputObjHandlingPolicy::AnalysisObject};
+  TH1D* ptHistogramAllchargeRec = nullptr;
+  TH1D* ptHistogramPionrec        = nullptr;
+  TH1D* ptHistogramKaonrec        = nullptr;
+  TH1D* ptHistogramProtonrec      = nullptr;
+  TH1D* hRecoPi                   = nullptr;
+  TH1D* hRecoKa                   = nullptr;
+  TH1D* hRecoPr                   = nullptr;
+  TH2D* hPtyPion                  = nullptr;
+  TH2D* hPtyKaon                  = nullptr;
+  TH2D* hPtyProton                = nullptr;
 
   Configurable<float> ptMax{"ptMax", 2.0, "maximum pT"};
   Configurable<float> ptMin{"ptMin", 0.15, "minimum pT"};
@@ -90,6 +105,31 @@ struct EventMeanPtId {
 
   void init(o2::framework::InitContext&)
   {
+  if (cfgLoadEff) {
+      // Set CCDB url
+      ccdb->setURL(cfgUrlCCDB.value);
+      ccdb->setCaching(true);
+      ccdb->setLocalObjectValidityChecking();
+      //ccdb->setCreatedNotAfter(ccdbNoLaterThan.value);
+      //LOGF(info, "Getting object %s", ccdbPath.value.data());
+      
+      TList* lst = ccdb->getForTimeStamp<TList>(cfgPathCCDB.value, -1);
+      ptHistogramAllchargeRec = reinterpret_cast<TH1D*>(lst->FindObject("ptHistogramAllchargeRec"));
+      ptHistogramPionrec        = reinterpret_cast<TH1D*>(lst->FindObject("ptHistogramPionrec"));
+      ptHistogramKaonrec        = reinterpret_cast<TH1D*>(lst->FindObject("ptHistogramKaonrec"));
+      ptHistogramProtonrec      = reinterpret_cast<TH1D*>(lst->FindObject("ptHistogramProtonrec"));
+      hRecoPi                   = reinterpret_cast<TH1D*>(lst->FindObject("hRecoPi"));
+      hRecoKa                   = reinterpret_cast<TH1D*>(lst->FindObject("hRecoKa"));
+      hRecoPr                   = reinterpret_cast<TH1D*>(lst->FindObject("hRecoPr"));
+      hPtyPion                  = reinterpret_cast<TH2D*>(lst->FindObject("hPtyPion"));
+      hPtyKaon                  = reinterpret_cast<TH2D*>(lst->FindObject("hPtyKaon"));
+      hPtyProton                = reinterpret_cast<TH2D*>(lst->FindObject("hPtyProton"));
+      
+       if (!ptHistogramAllchargeRec || !ptHistogramPionrec || !ptHistogramKaonrec || !ptHistogramProtonrec || !hRecoPi || !hRecoKa || !hRecoPr || !hPtyPion || !hPtyKaon || !hPtyProton) {
+        LOGF(info, "FATAL!! Could not find required histograms in CCDB");
+      }
+                }
+
     std::vector<double> ptBinning = {0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 4.0};
     //  AxisSpec ptAxis = {ptBinning, "#it{p}_{T} (GeV/#it{c})"};
     AxisSpec vtxZAxis = {100, -20.0, 20.0, "Z (cm)"};
@@ -300,7 +340,7 @@ struct EventMeanPtId {
     histos.add("hZvtx_after_sel8_rec", "hZvtx_after_sel8_rec", kTH1D, {vtxZAxis});
     histos.add("etaHistogram_allcharge_rec", "etaHistogram_allcharge_rec", kTH1D, {etaAxis});
     histos.add("ptHistogram_allcharge_bfptcut_rec", "ptHistogram_allcharge_bfptcut_rec", kTH1D, {ptAxis});
-    histos.add("ptHistogram_allcharge_rec", "ptHistogram_allcharge_rec", kTH1D, {ptAxis});
+    histos.add("ptHistogramAllchargeRec", "ptHistogramAllchargeRec", kTH1D, {ptAxis});
     histos.add("ptHistogramPionrec", "ptHistogramPionrec", kTH1D, {ptAxis});
     histos.add("ptHistogramKaonrec", "ptHistogramKaonrec", kTH1D, {ptAxis});
     histos.add("ptHistogramProtonrec", "ptHistogramProtonrec", kTH1D, {ptAxis});
@@ -312,7 +352,22 @@ struct EventMeanPtId {
     histos.add("ptHistogramProtonrec_pdg", "ptHistogramProtonrec_pdg", kTH1D, {ptAxis});
     histos.add("Histogram_mass2_p_rec_beforesel", "Histogram_mass2_p_rec_beforesel", kTH1D, {ptAxis});
     histos.add("Histogram_mass2_p_rec_aftersel", "Histogram_mass2_p_rec_aftersel", kTH1D, {ptAxis});
-
+    histos.add("hEffVar1x", "hEffVar1x", kTH2D, {subAxis, nchAxis});
+    histos.add("hEffVar2x", "hEffVar2x", kTH2D, {subAxis, nchAxis});
+    histos.add("hEffVarx", "hEffVarx", kTH2D, {subAxis, nchAxis});
+    histos.add("hEffVar1pix", "hEffVar1pix", kTH2D, {subAxis, nchAxis});
+    histos.add("hEffVar2pix", "hEffVar2pix", kTH2D, {subAxis, nchAxis});
+    histos.add("hEffVarpix", "hEffVarpix", kTH2D, {subAxis, nchAxis});
+    histos.add("hEffVar1kx", "hEffVar1kx", kTH2D, {subAxis, nchAxis});
+    histos.add("hEffVar2kx", "hEffVar2kx", kTH2D, {subAxis, nchAxis});
+    histos.add("hEffVarkx", "hEffVarkx", kTH2D, {subAxis, nchAxis});
+    histos.add("hEffVar1px", "hEffVar1px", kTH2D, {subAxis, nchAxis});
+    histos.add("hEffVar2px", "hEffVar2px", kTH2D, {subAxis, nchAxis});
+    histos.add("hEffVarpx", "hEffVarpx", kTH2D, {subAxis, nchAxis});
+    histos.add("hEffVar2Meanptx", "hEffVar2Meanptx", kTH2D, {nchAxis, varAxis2});
+    histos.add("hEffVar2Meanptpix", "hEffVar2Meanptpix", kTH2D, {nchAxis, varAxis2});
+    histos.add("hEffVar2Meanptkx", "hEffVar2Meanptkx", kTH2D, {nchAxis, varAxis2});
+    histos.add("hEffVar2Meanptpx", "hEffVar2Meanptpx", kTH2D, {nchAxis, varAxis2});
     //=======================MC histograms Generated ================================================
     histos.add("ptHistogram_allcharge_gen", "ptHistogram_allcharge_gen", kTH1D, {ptAxis});
     histos.add("ptHistogramPion", "ptHistogramPion", kTH1D, {ptAxis});
@@ -399,10 +454,10 @@ struct EventMeanPtId {
   Configurable<float> cProtonPthcut{"cProtonPthcut", 1.0, "proton threshold cut of proton"};
   Configurable<float> cNSigCut2{"cNSigCut2", 2.0, "nSigma cut (2)"};
   Configurable<float> cNSigCut3{"cNSigCut3", 3.0, "nSigma cut (3)"};
-  Configurable<float> cElMinCut{"cElMinCut", -3.0, "pion min cut of pion"};
-  Configurable<float> cElMaxCut{"cElMaxCut", 5.0, "pion min cut of pion"};
-  Configurable<float> cTwoPtlCut2{"cTwoPtlCut2", 2.0, "n2ptl cut (2)"};
-  Configurable<float> cRapidityCut05{"cRapidityCut05", 0.5, "n2ptl cut (2)"};
+  Configurable<float> cElMinCut{"cElMinCut", -3.0, "electron min cut"};
+  Configurable<float> cElMaxCut{"cElMaxCut", 5.0, "electron max cut"};
+  Configurable<float> cTwoPtlCut2{"cTwoPtlCut2", 2.0, "n2ptl cut"};
+  Configurable<float> cRapidityCut05{"cRapidityCut05", 0.5, "rapidity cut"};
 
   template <typename C>
   bool selCollision(C const& coll)
@@ -585,6 +640,12 @@ struct EventMeanPtId {
     return false;
   }
 
+   double getEfficiency(double pt, TH1D* ptHistogramAllchargeRec){    
+   int bin = ptHistogramAllchargeRec->FindBin(pt);
+   double eff = ptHistogramAllchargeRec->GetBinContent(bin);
+   return (eff > 0) ? eff : 1e-6;     // Avoid division by zero
+   }
+
   //++++++++++++++++++++++++++++++++++++DATA CALCULATION +++++++++++++++++++++++++++++++++++++++++++++++++++++//
 
   void process(aod::MyCollision const& coll, aod::MyTracks const& inputTracks)
@@ -608,8 +669,7 @@ struct EventMeanPtId {
     double var1Pi = 0., var2Pi = 0.;
     double var1Ka = 0., var2Ka = 0.;
     double var1Pr = 0., var2Pr = 0.;
-    // double sumPtWeight = 0., sumWeight = 0., sumPtPtWeight = 0.;
-
+   
     int sample = histos.get<TH1>(HIST("Data/hZvtx_after_sel8"))->GetEntries();
     sample = sample % 30; // subsample error estimation
     for (const auto& track : inputTracks) {
@@ -756,8 +816,8 @@ struct EventMeanPtId {
     if (nchAll < cTwoPtlCut2)
       return;
     var1 = (q1 * q1 - q2) / (nchAll * (nchAll - 1));
-    var2 = (q1 / nchAll);
-
+    var2 = (q1 / nchAll);   
+    
     //------------------ all charges-------------------------------------
     histos.fill(HIST("Data/hVar1"), sample, cent, var1);
     histos.fill(HIST("Data/hVar2"), sample, cent, var2);
@@ -769,20 +829,20 @@ struct EventMeanPtId {
     //---------------------- pions ----------------------------------------
     if (nchPi >= cTwoPtlCut2) {
       var1Pi = (q1Pi * q1Pi - q2Pi) / (nchPi * (nchPi - 1));
-      var2Pi = (q1Pi / nchPi);
+      var2Pi = (q1Pi / nchPi);    
     }
 
     //----------------------- kaons ---------------------------------------
     if (nchKa >= cTwoPtlCut2) {
       var1Ka = (q1Ka * q1Ka - q2Ka) / (nchKa * (nchKa - 1));
       var2Ka = (q1Ka / nchKa);
-    }
+       }
 
     //---------------------------- protons ----------------------------------
     if (nchPr >= cTwoPtlCut2) {
       var1Pr = (q1Pr * q1Pr - q2Pr) / (nchPr * (nchPr - 1));
       var2Pr = (q1Pr / nchPr);
-    }
+          }
 
     //========================centrality==========================================
     histos.fill(HIST("Data/hVar1pi"), sample, cent, var1Pi);
@@ -867,6 +927,11 @@ struct EventMeanPtId {
     double q1Pi = 0., q2Pi = 0., q1Ka = 0., q2Ka = 0., q1Pr = 0., q2Pr = 0.;
     double var1 = 0., var2 = 0., twoParAllCharge = 0.;
     double var1Pi = 0., var2Pi = 0., var1Ka = 0., var2Ka = 0., var1Pr = 0., var2Pr = 0.;
+    double sumPtWeight = 0., sumWeight = 0., sumPtPtWeight = 0., var1Eff = 0., var2Eff = 0.;
+    double sumPtWeightPi = 0., sumWeightPi = 0., sumPtPtWeightPi = 0., var1EffPi = 0., var2EffPi = 0.;
+    double sumPtWeightKa = 0., sumWeightKa = 0., sumPtPtWeightKa = 0., var1EffKa = 0., var2EffKa = 0.;
+    double sumPtWeightPr = 0., sumWeightPr = 0., sumPtPtWeightPr = 0., var1EffPr = 0., var2EffPr = 0.;
+
 
     int sample = histos.get<TH1>(HIST("Rec/hZvtx_after_sel8"))->GetEntries();
     sample = sample % 30;
@@ -901,7 +966,7 @@ struct EventMeanPtId {
       auto mcParticle = track.mcParticle();
       nchAll += 1.;
       histos.fill(HIST("Rec/hnchAll"), nchAll);
-      histos.fill(HIST("ptHistogram_allcharge_rec"), track.pt());
+      histos.fill(HIST("ptHistogramAllchargeRec"), track.pt());
       histos.fill(HIST("Rec/hDCAxy"), track.dcaXY());
       histos.fill(HIST("Rec/hDCAz"), track.dcaZ());
       histos.fill(HIST("Rec/hTPCCrossedrows_after"), track.tpcNClsCrossedRows());
@@ -925,6 +990,12 @@ struct EventMeanPtId {
       }
       q1 += track.pt();
       q2 += (track.pt() * track.pt());
+
+      double eff = getEfficiency(track.pt(), ptHistogramAllchargeRec);
+      //  LOGF(info, " with value %.2f",  eff); 
+      sumPtWeight += track.pt()/eff ;
+      sumPtPtWeight += (track.pt()*track.pt())/(eff * eff) ;
+      sumWeight += 1. / eff ;
 
       if (std::abs(mcParticle.pdgCode()) == PDG_t::kPiPlus)
         histos.fill(HIST("ptHistogramPionrec_pdg"), track.pt());
@@ -991,6 +1062,13 @@ struct EventMeanPtId {
         nchPi += 1.;
         q1Pi += track.pt();
         q2Pi += (track.pt() * track.pt());
+
+	double effPi = getEfficiency(track.pt(), ptHistogramPionrec);
+        //  LOGF(info, " with value %.2f",  eff); 
+        sumPtWeightPi += track.pt()/effPi ;
+        sumPtPtWeightPi += (track.pt()*track.pt())/(effPi * effPi) ;
+        sumWeightPi += 1. / effPi ;
+
         histos.fill(HIST("hPyPion_rec"), track.p(), track.rapidity(massPi));
         histos.fill(HIST("hPtyPion_rec"), track.pt(), track.rapidity(massPi));
       }
@@ -1024,6 +1102,13 @@ struct EventMeanPtId {
         nchKa += 1.;
         q1Ka += track.pt();
         q2Ka += (track.pt() * track.pt());
+
+	double effKa = getEfficiency(track.pt(), ptHistogramKaonrec);
+        //  LOGF(info, " with value %.2f",  eff); 
+        sumPtWeightKa += track.pt()/effKa ;
+        sumPtPtWeightKa += (track.pt()*track.pt())/(effKa * effKa) ;
+        sumWeightKa += 1. / effKa ;
+
         histos.fill(HIST("hPyKaon_rec"), track.p(), track.rapidity(massKa));
         histos.fill(HIST("hPtyKaon_rec"), track.pt(), track.rapidity(massKa));
       }
@@ -1057,6 +1142,13 @@ struct EventMeanPtId {
         nchPr += 1.;
         q1Pr += track.pt();
         q2Pr += (track.pt() * track.pt());
+
+	double effPr = getEfficiency(track.pt(), ptHistogramProtonrec);
+        //  LOGF(info, " with value %.2f",  eff); 
+        sumPtWeightPr += track.pt()/effPr ;
+        sumPtPtWeightPr += (track.pt()*track.pt())/(effPr * effPr) ;
+        sumWeightPr += 1. / effPr ;
+
         histos.fill(HIST("hPyProton_rec"), track.p(), track.rapidity(massPr));
         histos.fill(HIST("hPtyProton_rec"), track.pt(), track.rapidity(massPr));
       }
@@ -1069,6 +1161,11 @@ struct EventMeanPtId {
     var1 = (q1 * q1 - q2) / (nchAll * (nchAll - 1));
     var2 = (q1 / nchAll);
 
+    //------------------ Efficiency corrected histograms ---------------
+
+     var1Eff = (sumPtWeight * sumPtWeight - sumPtPtWeight) / (sumWeight * (sumWeight - 1));
+     var2Eff = (sumPtWeight / sumWeight);
+
     histos.fill(HIST("Rec/hVar1"), sample, cent, var1);
     histos.fill(HIST("Rec/hVar2"), sample, cent, var2);
     histos.fill(HIST("Rec/hVarc"), sample, cent);
@@ -1080,16 +1177,25 @@ struct EventMeanPtId {
     if (nchPi >= cTwoPtlCut2) {
       var1Pi = (q1Pi * q1Pi - q2Pi) / (nchPi * (nchPi - 1));
       var2Pi = (q1Pi / nchPi);
+
+      var1EffPi = (sumPtWeightPi * sumPtWeightPi - sumPtPtWeightPi) / (sumWeightPi * (sumWeightPi - 1));
+      var2EffPi = (sumPtWeightPi / sumWeightPi);
     }
     //----------------------- kaons ---------------------------------------
     if (nchKa >= cTwoPtlCut2) {
       var1Ka = (q1Ka * q1Ka - q2Ka) / (nchKa * (nchKa - 1));
       var2Ka = (q1Ka / nchKa);
+
+      var1EffKa = (sumPtWeightKa * sumPtWeightKa - sumPtPtWeightKa) / (sumWeightKa * (sumWeightKa - 1));
+      var2EffKa = (sumPtWeightKa / sumWeightKa);
     }
     //---------------------------- protons ----------------------------------
     if (nchPr >= cTwoPtlCut2) {
       var1Pr = (q1Pr * q1Pr - q2Pr) / (nchPr * (nchPr - 1));
       var2Pr = (q1Pr / nchPr);
+
+      var1EffPr = (sumPtWeightPr * sumPtWeightPr - sumPtPtWeightPr) / (sumWeightPr * (sumWeightPr - 1));
+      var2EffPr = (sumPtWeightPr / sumWeightPr);
     }
     //========================centrality==========================================
 
@@ -1120,6 +1226,27 @@ struct EventMeanPtId {
     histos.fill(HIST("Rec/hVar2px"), sample, nchAll, var2Pr);
     histos.fill(HIST("Rec/hVarpx"), sample, nchPr);
     histos.fill(HIST("Rec/hVar2meanptpx"), nchAll, var2Pr);
+
+    histos.fill(HIST("hEffVar1x"), sample, nchAll, var1Eff);
+    histos.fill(HIST("hEffVar2x"), sample, nchAll, var2Eff);
+    histos.fill(HIST("hEffVarx"), sample, nchAll);
+    histos.fill(HIST("hEffVar2Meanptx"), nchAll, var2Eff);
+    
+    histos.fill(HIST("hEffVar1pix"), sample, nchAll, var1EffPi);
+    histos.fill(HIST("hEffVar2pix"), sample, nchAll, var2EffPi);
+    histos.fill(HIST("hEffVarpix"), sample, nchAll);
+    histos.fill(HIST("hEffVar2Meanptpix"), nchAll, var2EffPi);
+
+    histos.fill(HIST("hEffVar1kx"), sample, nchAll, var1EffKa);
+    histos.fill(HIST("hEffVar2kx"), sample, nchAll, var2EffKa);
+    histos.fill(HIST("hEffVarkx"), sample, nchAll);
+    histos.fill(HIST("hEffVar2Meanptkx"), nchAll, var2EffKa);
+
+    histos.fill(HIST("hEffVar1px"), sample, nchAll, var1EffPr);
+    histos.fill(HIST("hEffVar2px"), sample, nchAll, var2EffPr);
+    histos.fill(HIST("hEffVarpx"), sample, nchAll);
+    histos.fill(HIST("hEffVar2Meanptpx"), nchAll, var2EffPr);
+
 
     //================= generated level==============================
 
