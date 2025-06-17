@@ -17,32 +17,33 @@
 #ifndef PWGEM_DILEPTON_CORE_SINGLETRACKQC_H_
 #define PWGEM_DILEPTON_CORE_SINGLETRACKQC_H_
 
-#include <vector>
-#include <map>
-#include <unordered_map>
-#include <string>
-
-#include "TString.h"
-#include "Math/Vector4D.h"
-#include "Framework/runDataProcessing.h"
-#include "Framework/AnalysisTask.h"
-#include "Framework/ASoAHelpers.h"
-
-#include "DetectorsBase/GeometryManager.h"
-#include "DataFormatsParameters/GRPObject.h"
-#include "DataFormatsParameters/GRPMagField.h"
-#include "CCDB/BasicCCDBManager.h"
-#include "Tools/ML/MlResponse.h"
-#include "Common/CCDB/RCTSelectionFlags.h"
-
-#include "PWGEM/Dilepton/DataModel/dileptonTables.h"
 #include "PWGEM/Dilepton/Core/DielectronCut.h"
 #include "PWGEM/Dilepton/Core/DimuonCut.h"
 #include "PWGEM/Dilepton/Core/EMEventCut.h"
-#include "PWGEM/Dilepton/Utils/EventHistograms.h"
+#include "PWGEM/Dilepton/DataModel/dileptonTables.h"
 #include "PWGEM/Dilepton/Utils/EMTrackUtilities.h"
-#include "PWGEM/Dilepton/Utils/PairUtilities.h"
+#include "PWGEM/Dilepton/Utils/EventHistograms.h"
 #include "PWGEM/Dilepton/Utils/MlResponseDielectronSingleTrack.h"
+#include "PWGEM/Dilepton/Utils/PairUtilities.h"
+
+#include "Common/CCDB/RCTSelectionFlags.h"
+#include "Tools/ML/MlResponse.h"
+
+#include "CCDB/BasicCCDBManager.h"
+#include "DataFormatsParameters/GRPMagField.h"
+#include "DataFormatsParameters/GRPObject.h"
+#include "DetectorsBase/GeometryManager.h"
+#include "Framework/ASoAHelpers.h"
+#include "Framework/AnalysisTask.h"
+#include "Framework/runDataProcessing.h"
+
+#include "Math/Vector4D.h"
+#include "TString.h"
+
+#include <map>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 using namespace o2;
 using namespace o2::aod;
@@ -95,7 +96,8 @@ struct SingleTrackQC {
     Configurable<bool> cfgRequireNoTFB{"cfgRequireNoTFB", true, "require No time frame border in event cut"};
     Configurable<bool> cfgRequireNoITSROFB{"cfgRequireNoITSROFB", true, "require no ITS readout frame border in event cut"};
     Configurable<bool> cfgRequireNoSameBunchPileup{"cfgRequireNoSameBunchPileup", false, "require no same bunch pileup in event cut"};
-    Configurable<bool> cfgRequireVertexITSTPC{"cfgRequireVertexITSTPC", false, "require Vertex ITSTPC in event cut"}; // ITS-TPC matched track contributes PV.
+    Configurable<bool> cfgRequireVertexITSTPC{"cfgRequireVertexITSTPC", false, "require Vertex ITSTPC in event cut"};             // ITS-TPC matched track contributes PV.
+    Configurable<bool> cfgRequireVertexTOFmatched{"cfgRequireVertexTOFmatched", false, "require Vertex TOFmatched in event cut"}; // ITS-TPC-TOF matched track contributes PV.
     Configurable<bool> cfgRequireGoodZvtxFT0vsPV{"cfgRequireGoodZvtxFT0vsPV", false, "require good Zvtx between FT0 vs. PV in event cut"};
     Configurable<int> cfgTrackOccupancyMin{"cfgTrackOccupancyMin", -2, "min. occupancy"};
     Configurable<int> cfgTrackOccupancyMax{"cfgTrackOccupancyMax", 1000000000, "max. occupancy"};
@@ -201,6 +203,11 @@ struct SingleTrackQC {
     Configurable<float> cfg_min_rabs{"cfg_min_rabs", 17.6, "min Radius at the absorber end"};
     Configurable<float> cfg_max_rabs{"cfg_max_rabs", 89.5, "max Radius at the absorber end"};
     Configurable<bool> enableTTCA{"enableTTCA", true, "Flag to enable or disable TTCA"};
+    Configurable<float> cfg_max_relDPt_wrt_matchedMCHMID{"cfg_max_relDPt_wrt_matchedMCHMID", 1e+10f, "max. relative dpt between MFT-MCH-MID and MCH-MID"};
+    Configurable<float> cfg_max_DEta_wrt_matchedMCHMID{"cfg_max_DEta_wrt_matchedMCHMID", 1e+10f, "max. deta between MFT-MCH-MID and MCH-MID"};
+    Configurable<float> cfg_max_DPhi_wrt_matchedMCHMID{"cfg_max_DPhi_wrt_matchedMCHMID", 1e+10f, "max. dphi between MFT-MCH-MID and MCH-MID"};
+    Configurable<bool> requireMFTHitMap{"requireMFTHitMap", false, "flag to apply MFT hit map"};
+    Configurable<std::vector<int>> requiredMFTDisks{"requiredMFTDisks", std::vector<int>{0}, "hit map on MFT disks [0,1,2,3,4]. logical-OR of each double-sided disk"};
   } dimuoncuts;
 
   o2::aod::rctsel::RCTFlagsChecker rctChecker;
@@ -237,8 +244,8 @@ struct SingleTrackQC {
       fRegistry.add("Track/positive/hDCAxyRes_Pt", "DCA_{xy} resolution vs. pT;p_{T} (GeV/c);DCA_{xy} resolution (#mum)", kTH2F, {{200, 0, 10}, {500, 0., 500}}, false);
       fRegistry.add("Track/positive/hDCAzRes_Pt", "DCA_{z} resolution vs. pT;p_{T} (GeV/c);DCA_{z} resolution (#mum)", kTH2F, {{200, 0, 10}, {500, 0., 400}}, false);
       fRegistry.add("Track/positive/hDCA3dRes_Pt", "DCA_{3D} resolution vs. pT;p_{T} (GeV/c);DCA_{3D} resolution (#mum)", kTH2F, {{200, 0, 10}, {500, 0., 500}}, false);
-      fRegistry.add("Track/positive/hNclsTPC", "number of TPC clusters;TPC N_{cls}", kTH1F, {{161, -0.5, 160.5}}, false);
-      fRegistry.add("Track/positive/hNcrTPC", "number of TPC crossed rows;TPC N_{CR}", kTH1F, {{161, -0.5, 160.5}}, false);
+      fRegistry.add("Track/positive/hNclsTPC_Pt", "number of TPC clusters;p_{T,e} (GeV/c);TPC N_{cls}", kTH2F, {axis_pt, {161, -0.5, 160.5}}, false);
+      fRegistry.add("Track/positive/hNcrTPC_Pt", "number of TPC crossed rows;p_{T,e} (GeV/c);TPC N_{CR}", kTH2F, {axis_pt, {161, -0.5, 160.5}}, false);
       fRegistry.add("Track/positive/hChi2TPC", "chi2/number of TPC clusters;TPC #chi^{2}/N_{CR}", kTH1F, {{100, 0, 10}}, false);
       fRegistry.add("Track/positive/hDeltaPin", "p_{in} vs. p_{pv};p_{pv} (GeV/c);(p_{in} - p_{pv})/p_{pv}", kTH2F, {{1000, 0, 10}, {200, -1, +1}}, false);
       fRegistry.add("Track/positive/hTPCNcr2Nf", "TPC Ncr/Nfindable;TPC N_{CR}/N_{cls}^{findable}", kTH1F, {{200, 0, 2}}, false);
@@ -282,6 +289,7 @@ struct SingleTrackQC {
       // track info
       fRegistry.add("Track/positive/hs", "rec. single muon", kTHnSparseD, {axis_pt, axis_eta, axis_phi, axis_dca}, true);
       fRegistry.add("Track/positive/hEtaPhi_MatchMCHMID", "#eta vs. #varphi of matched MCHMID", kTH2F, {{180, 0, 2.f * M_PI}, {100, -6, -1}}, false);
+      fRegistry.add("Track/positive/hdEtadPhi", "#Delta#eta vs. #Delta#varphi between MFT-MCH-MID and MCH-MID;#varphi_{sa} - #varphi_{gl} (rad.);#eta_{sa} - #eta_{gl}", kTH2F, {{90, -M_PI / 4, M_PI / 4}, {100, -0.5, +0.5}}, false);
       fRegistry.add("Track/positive/hQoverPt", "q/pT;q/p_{T} (GeV/c)^{-1}", kTH1F, {{400, -20, 20}}, false);
       fRegistry.add("Track/positive/hTrackType", "track type", kTH1F, {{6, -0.5f, 5.5}}, false);
       fRegistry.add("Track/positive/hDCAxy", "DCA x vs. y;DCA_{x} (cm);DCA_{y} (cm)", kTH2F, {{200, -0.5f, 0.5f}, {200, -0.5f, 0.5f}}, false);
@@ -293,8 +301,8 @@ struct SingleTrackQC {
       fRegistry.add("Track/positive/hNclsMFT", "number of MFT clusters", kTH1F, {{11, -0.5, 10.5}}, false);
       fRegistry.add("Track/positive/hPDCA", "pDCA;R at absorber end (cm);p #times DCA (GeV/c #upoint cm)", kTH2F, {{100, 0, 100}, {100, 0.0f, 1000}}, false);
       fRegistry.add("Track/positive/hChi2", "chi2;chi2", kTH1F, {{100, 0.0f, 100}}, false);
-      fRegistry.add("Track/positive/hChi2MatchMCHMID", "chi2 match MCH-MID;chi2", kTH1F, {{100, 0.0f, 100}}, false);
-      fRegistry.add("Track/positive/hChi2MatchMCHMFT", "chi2 match MCH-MFT;chi2", kTH1F, {{100, 0.0f, 100}}, false);
+      fRegistry.add("Track/positive/hChi2MatchMCHMID", "chi2 match MCH-MID;chi2", kTH1F, {{100, 0.0f, 10}}, false);
+      fRegistry.add("Track/positive/hChi2MatchMCHMFT", "chi2 match MCH-MFT;chi2/ndf", kTH1F, {{100, 0.0f, 10}}, false);
       fRegistry.add("Track/positive/hMFTClusterMap", "MFT cluster map", kTH1F, {{1024, -0.5, 1023.5}}, false);
       fRegistry.addClone("Track/positive/", "Track/negative/");
     }
@@ -358,6 +366,7 @@ struct SingleTrackQC {
     fEMEventCut.SetRequireNoITSROFB(eventcuts.cfgRequireNoITSROFB);
     fEMEventCut.SetRequireNoSameBunchPileup(eventcuts.cfgRequireNoSameBunchPileup);
     fEMEventCut.SetRequireVertexITSTPC(eventcuts.cfgRequireVertexITSTPC);
+    fEMEventCut.SetRequireVertexTOFmatched(eventcuts.cfgRequireVertexTOFmatched);
     fEMEventCut.SetRequireGoodZvtxFT0vsPV(eventcuts.cfgRequireGoodZvtxFT0vsPV);
     fEMEventCut.SetRequireNoCollInTimeRangeStandard(eventcuts.cfgRequireNoCollInTimeRangeStandard);
     fEMEventCut.SetRequireNoCollInTimeRangeStrict(eventcuts.cfgRequireNoCollInTimeRangeStrict);
@@ -452,6 +461,8 @@ struct SingleTrackQC {
     fDimuonCut.SetDCAxy(0.f, dimuoncuts.cfg_max_dcaxy);
     fDimuonCut.SetRabs(dimuoncuts.cfg_min_rabs, dimuoncuts.cfg_max_rabs);
     fDimuonCut.SetMaxPDCARabsDep([&](float rabs) { return (rabs < 26.5 ? 594.f : 324.f); });
+    fDimuonCut.SetMaxdPtdEtadPhiwrtMCHMID(dimuoncuts.cfg_max_relDPt_wrt_matchedMCHMID, dimuoncuts.cfg_max_DEta_wrt_matchedMCHMID, dimuoncuts.cfg_max_DPhi_wrt_matchedMCHMID); // this is relevant for global muons
+    fDimuonCut.SetMFTHitMap(dimuoncuts.requireMFTHitMap, dimuoncuts.requiredMFTDisks);
   }
 
   template <typename TTrack>
@@ -478,8 +489,8 @@ struct SingleTrackQC {
       fRegistry.fill(HIST("Track/positive/hDCAzRes_Pt"), track.pt(), std::sqrt(track.cZZ()) * 1e+4);  // convert cm to um
       fRegistry.fill(HIST("Track/positive/hDCA3dRes_Pt"), track.pt(), sigmaDca3D(track) * 1e+4);      // convert cm to um
       fRegistry.fill(HIST("Track/positive/hNclsITS"), track.itsNCls());
-      fRegistry.fill(HIST("Track/positive/hNclsTPC"), track.tpcNClsFound());
-      fRegistry.fill(HIST("Track/positive/hNcrTPC"), track.tpcNClsCrossedRows());
+      fRegistry.fill(HIST("Track/positive/hNclsTPC_Pt"), track.pt(), track.tpcNClsFound());
+      fRegistry.fill(HIST("Track/positive/hNcrTPC_Pt"), track.pt(), track.tpcNClsCrossedRows());
       fRegistry.fill(HIST("Track/positive/hTPCNcr2Nf"), track.tpcCrossedRowsOverFindableCls());
       fRegistry.fill(HIST("Track/positive/hTPCNcls2Nf"), track.tpcFoundOverFindableCls());
       fRegistry.fill(HIST("Track/positive/hTPCNclsShared"), track.pt(), track.tpcFractionSharedCls());
@@ -518,8 +529,8 @@ struct SingleTrackQC {
       fRegistry.fill(HIST("Track/negative/hDCAzRes_Pt"), track.pt(), std::sqrt(track.cZZ()) * 1e+4);  // convert cm to um
       fRegistry.fill(HIST("Track/negative/hDCA3dRes_Pt"), track.pt(), sigmaDca3D(track) * 1e+4);      // convert cm to um
       fRegistry.fill(HIST("Track/negative/hNclsITS"), track.itsNCls());
-      fRegistry.fill(HIST("Track/negative/hNclsTPC"), track.tpcNClsFound());
-      fRegistry.fill(HIST("Track/negative/hNcrTPC"), track.tpcNClsCrossedRows());
+      fRegistry.fill(HIST("Track/negative/hNclsTPC_Pt"), track.pt(), track.tpcNClsFound());
+      fRegistry.fill(HIST("Track/negative/hNcrTPC_Pt"), track.pt(), track.tpcNClsCrossedRows());
       fRegistry.fill(HIST("Track/negative/hTPCNcr2Nf"), track.tpcCrossedRowsOverFindableCls());
       fRegistry.fill(HIST("Track/negative/hTPCNcls2Nf"), track.tpcFoundOverFindableCls());
       fRegistry.fill(HIST("Track/negative/hTPCNclsShared"), track.pt(), track.tpcFractionSharedCls());
@@ -560,9 +571,15 @@ struct SingleTrackQC {
       weight = map_weight[track.globalIndex()];
     }
     float dca_xy = fwdDcaXYinSigma(track);
+
+    float deta = track.etaMatchedMCHMID() - track.eta();
+    float dphi = track.phiMatchedMCHMID() - track.phi();
+    o2::math_utils::bringToPMPi(dphi);
+
     if (track.sign() > 0) {
       fRegistry.fill(HIST("Track/positive/hs"), track.pt(), track.eta(), track.phi(), dca_xy, weight);
       fRegistry.fill(HIST("Track/positive/hEtaPhi_MatchMCHMID"), track.phiMatchedMCHMID(), track.etaMatchedMCHMID(), weight);
+      fRegistry.fill(HIST("Track/positive/hdEtadPhi"), dphi, deta, weight);
       fRegistry.fill(HIST("Track/positive/hQoverPt"), track.sign() / track.pt());
       fRegistry.fill(HIST("Track/positive/hTrackType"), track.trackType());
       fRegistry.fill(HIST("Track/positive/hDCAxy"), track.fwdDcaX(), track.fwdDcaY());
@@ -575,11 +592,12 @@ struct SingleTrackQC {
       fRegistry.fill(HIST("Track/positive/hPDCA"), track.rAtAbsorberEnd(), track.pDca());
       fRegistry.fill(HIST("Track/positive/hChi2"), track.chi2());
       fRegistry.fill(HIST("Track/positive/hChi2MatchMCHMID"), track.chi2MatchMCHMID());
-      fRegistry.fill(HIST("Track/positive/hChi2MatchMCHMFT"), track.chi2MatchMCHMFT());
+      fRegistry.fill(HIST("Track/positive/hChi2MatchMCHMFT"), track.chi2MatchMCHMFT() / (2 * (track.nClusters() + track.nClustersMFT()) - 5));
       fRegistry.fill(HIST("Track/positive/hMFTClusterMap"), track.mftClusterMap());
     } else {
       fRegistry.fill(HIST("Track/negative/hs"), track.pt(), track.eta(), track.phi(), dca_xy, weight);
       fRegistry.fill(HIST("Track/negative/hEtaPhi_MatchMCHMID"), track.phiMatchedMCHMID(), track.etaMatchedMCHMID(), weight);
+      fRegistry.fill(HIST("Track/negative/hdEtadPhi"), dphi, deta, weight);
       fRegistry.fill(HIST("Track/negative/hQoverPt"), track.sign() / track.pt());
       fRegistry.fill(HIST("Track/negative/hTrackType"), track.trackType());
       fRegistry.fill(HIST("Track/negative/hDCAxy"), track.fwdDcaX(), track.fwdDcaY());
@@ -592,7 +610,7 @@ struct SingleTrackQC {
       fRegistry.fill(HIST("Track/negative/hPDCA"), track.rAtAbsorberEnd(), track.pDca());
       fRegistry.fill(HIST("Track/negative/hChi2"), track.chi2());
       fRegistry.fill(HIST("Track/negative/hChi2MatchMCHMID"), track.chi2MatchMCHMID());
-      fRegistry.fill(HIST("Track/negative/hChi2MatchMCHMFT"), track.chi2MatchMCHMFT());
+      fRegistry.fill(HIST("Track/negative/hChi2MatchMCHMFT"), track.chi2MatchMCHMFT() / (2 * (track.nClusters() + track.nClustersMFT()) - 5));
       fRegistry.fill(HIST("Track/negative/hMFTClusterMap"), track.mftClusterMap());
     }
   }
