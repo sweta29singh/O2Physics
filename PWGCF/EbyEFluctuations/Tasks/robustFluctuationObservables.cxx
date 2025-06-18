@@ -2293,8 +2293,8 @@ struct RobustFluctuationObservables {
         }
 
       } // end of v0 loop
-    }   // end of if (flagIncludeQAHistK0S)
-  }     // end of processRobustFluctuationObservables()
+    } // end of if (flagIncludeQAHistK0S)
+  } // end of processRobustFluctuationObservables()
 
   // shortcut function to fill 2D histograms
   void fillHistForThisCut(string cutName, int multNTracksPV, int multTrk, int nTracksGlobalAccepted, double multT0A, double multT0C, double multV0A, double /*t0cCentr*/, int bc)
