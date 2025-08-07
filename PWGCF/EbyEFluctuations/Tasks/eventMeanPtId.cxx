@@ -1320,3 +1320,4 @@ WorkflowSpec defineDataProcessing(ConfigContext const& cfgc)
   WorkflowSpec workflow{adaptAnalysisTask<EventMeanPtId>(cfgc)};
   return workflow;
 }
+ 
