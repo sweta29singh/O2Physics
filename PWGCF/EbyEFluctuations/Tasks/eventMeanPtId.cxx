@@ -38,12 +38,12 @@
 #include "Framework/RunningWorkflowInfo.h"
 #include "Framework/runDataProcessing.h"
 
-#include <TPDGCode.h>
-
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <vector>
+
+#include <TPDGCode.h>
 
 double massPi = o2::constants::physics::MassPionCharged;
 double massKa = o2::constants::physics::MassKaonCharged;
