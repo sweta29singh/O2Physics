@@ -648,14 +648,14 @@ struct EventMeanPtId {
       return false;
     }
 =======
-      if (csyDCAxy && std::fabs(track.dcaXY()) > cDcaXYcut) {
-        return false;
-      }
-      histos.fill(HIST("tracksel"), 3);
+    if (csyDCAxy && std::fabs(track.dcaXY()) > cDcaXYcut) {
+      return false;
+    }
+    histos.fill(HIST("tracksel"), 3);
 
-      if (csyDCAz && std::fabs(track.dcaZ()) > cDcaZcut) {
-        return false;
-      }
+    if (csyDCAz && std::fabs(track.dcaZ()) > cDcaZcut) {
+      return false;
+    }
 >>>>>>> 7c3d72f98455d47d204769c7ed8def07344454f8
     histos.fill(HIST("tracksel"), 4);
 
@@ -680,19 +680,19 @@ struct EventMeanPtId {
     }
 =======
 
-      if (csyTPCcr && track.tpcNClsCrossedRows() < csyTPCcrosscut) {
-        return false;
-      }
-      histos.fill(HIST("tracksel"), 6);
+    if (csyTPCcr && track.tpcNClsCrossedRows() < csyTPCcrosscut) {
+      return false;
+    }
+    histos.fill(HIST("tracksel"), 6);
 
-      if (csyITSchi && track.itsChi2NCl() >= csysItsChiCut) {
-        return false;
-      }
-      histos.fill(HIST("tracksel"), 7);
+    if (csyITSchi && track.itsChi2NCl() >= csysItsChiCut) {
+      return false;
+    }
+    histos.fill(HIST("tracksel"), 7);
 
-      if (csyTPCchi && track.tpcChi2NCl() >= csysTpcChiCut) {
-        return false;
-      }
+    if (csyTPCchi && track.tpcChi2NCl() >= csysTpcChiCut) {
+      return false;
+    }
 >>>>>>> 7c3d72f98455d47d204769c7ed8def07344454f8
     histos.fill(HIST("tracksel"), 8);
 
@@ -721,17 +721,17 @@ struct EventMeanPtId {
       }
       histos.fill(HIST("tracksel"), 11);
 =======
-        if (track.itsNCls() < csysnITSClustersCut) {
-          return false;
-        }
-        histos.fill(HIST("tracksel"), 10);
+      if (track.itsNCls() < csysnITSClustersCut) {
+        return false;
       }
+      histos.fill(HIST("tracksel"), 10);
+    }
 
-      if (ctpcNClusterFound) {
-        if (track.tpcNClsFound() < csystpcNClsCut) {
-          return false;
-        }
-        histos.fill(HIST("tracksel"), 11);
+    if (ctpcNClusterFound) {
+      if (track.tpcNClsFound() < csystpcNClsCut) {
+        return false;
+      }
+      histos.fill(HIST("tracksel"), 11);
 >>>>>>> 7c3d72f98455d47d204769c7ed8def07344454f8
     }
 
@@ -979,9 +979,9 @@ struct EventMeanPtId {
           q2Pi += (track.pt() * track.pt());
           if (track.beta() > 1)
 =======
-        if (effSwitch) {
-          double eff = getEfficiency(track.pt(), track.eta(), ptHistogramAllchargeRec);
-          if (eff < threshold)
+      if (effSwitch) {
+        double eff = getEfficiency(track.pt(), track.eta(), ptHistogramAllchargeRec);
+        if (eff < threshold)
 >>>>>>> 7c3d72f98455d47d204769c7ed8def07344454f8
             continue;
           double weight = 1. / eff;
